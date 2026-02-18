@@ -599,13 +599,6 @@ function renderTodoistWidget() {
     return;
   }
 
-  // Add "New Task" button at top
-  let html = `
-    <div class="todoist-add-task">
-      <button class="btn btn-primary btn-sm" onclick="showAddTaskModal()">+ Add Task</button>
-    </div>
-  `;
-
   // Sort tasks: today first, then by priority
   const sortedTasks = [...tasks].sort((a, b) => {
     const aDueToday = isDueToday(a);
@@ -615,7 +608,7 @@ function renderTodoistWidget() {
     return (b.priority || 1) - (a.priority || 1);
   });
 
-  html += sortedTasks.slice(0, 10).map(task => {
+  let html = sortedTasks.slice(0, 10).map(task => {
     const completed = task.is_completed ? 'completed' : '';
     const dueClass = getDueClass(task);
     const dueText = getDueText(task);
@@ -633,6 +626,13 @@ function renderTodoistWidget() {
       </div>
     `;
   }).join('');
+
+  // Add "New Task" button at bottom
+  html += `
+    <div class="todoist-add-task">
+      <button class="btn btn-primary btn-xs" onclick="showAddTaskModal()">+ Add Task</button>
+    </div>
+  `;
 
   container.innerHTML = `<div class="todoist-list">${html}</div>`;
 }
