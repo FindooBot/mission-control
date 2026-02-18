@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="auto">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,72 +19,97 @@
       <h1>Mission Control</h1>
     </div>
     <div class="header-right">
+      <span class="last-updated" id="lastUpdated">Loading...</span>
+      <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">
+        <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
       <span class="status-badge online">● Online</span>
-      <a href="/setup" class="btn btn-secondary btn-sm">Settings</a>
+      <a href="/settings" class="btn btn-secondary btn-sm">Settings</a>
     </div>
   </header>
 
   <main class="dashboard-grid">
-    <!-- Calendar Widget -->
-    <div class="widget widget-calendar">
+    <!-- Calendar Widget (Left Column, Top) -->
+    <div class="widget widget-calendar" data-widget="calendar">
       <div class="widget-header">
         <h2>📅 Calendar</h2>
-        <span class="widget-count">0 events</span>
+        <span class="widget-count" id="calendarCount">0 events</span>
       </div>
-      <div class="widget-content">
-        <div class="empty-state">
-          <p>Calendar integration coming soon</p>
-          <span class="text-muted">Your events will appear here</span>
+      <div class="widget-content" id="calendarContent">
+        <div class="widget-loading">
+          <div class="spinner"></div>
+          <span>Loading events...</span>
         </div>
       </div>
     </div>
 
-    <!-- Shortcut Widget -->
-    <div class="widget widget-shortcut">
+    <!-- Todoist Widget (Left Column, Bottom) -->
+    <div class="widget widget-todoist" data-widget="todoist">
       <div class="widget-header">
-        <h2>🚀 Shortcut Stories</h2>
-        <span class="widget-count">0 stories</span>
+        <h2>✅ Todoist</h2>
+        <span class="widget-count" id="todoistCount">0 tasks</span>
       </div>
-      <div class="widget-content">
-        <div class="empty-state">
-          <p>Shortcut integration coming soon</p>
-          <span class="text-muted">Your stories will appear here</span>
+      <div class="widget-content" id="todoistContent">
+        <div class="widget-loading">
+          <div class="spinner"></div>
+          <span>Loading tasks...</span>
         </div>
       </div>
     </div>
 
-    <!-- GitHub Widget -->
-    <div class="widget widget-github">
+    <!-- Shortcut Widget (Right Column, Top) -->
+    <div class="widget widget-shortcut" data-widget="shortcut">
       <div class="widget-header">
-        <h2>🐙 GitHub PRs</h2>
-        <span class="widget-count">0 PRs</span>
+        <h2>🚀 Shortcut</h2>
+        <span class="widget-count" id="shortcutCount">0 stories</span>
       </div>
-      <div class="widget-content">
-        <div class="empty-state">
-          <p>GitHub integration coming soon</p>
-          <span class="text-muted">Your pull requests will appear here</span>
+      <div class="widget-content" id="shortcutContent">
+        <div class="widget-loading">
+          <div class="spinner"></div>
+          <span>Loading stories...</span>
         </div>
       </div>
     </div>
 
-    <!-- Todoist Widget -->
-    <div class="widget widget-todoist">
+    <!-- GitHub Widget (Right Column, Bottom) -->
+    <div class="widget widget-github" data-widget="github">
       <div class="widget-header">
-        <h2>✅ Todoist Tasks</h2>
-        <span class="widget-count">0 tasks</span>
+        <h2>🐙 GitHub</h2>
+        <span class="widget-count" id="githubCount">0 PRs</span>
       </div>
-      <div class="widget-content">
-        <div class="empty-state">
-          <p>Todoist integration coming soon</p>
-          <span class="text-muted">Your tasks will appear here</span>
+      <div class="widget-content" id="githubContent">
+        <div class="widget-loading">
+          <div class="spinner"></div>
+          <span>Loading PRs...</span>
         </div>
       </div>
     </div>
   </main>
 
   <footer class="dashboard-footer">
-    <p>Mission Control v1.0.0 • <a href="/setup">Settings</a></p>
+    <p>Mission Control v1.0.0 • <a href="/settings">Settings</a> • <a href="#" id="refreshLink">Refresh Now</a></p>
   </footer>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Initial data for server-side rendering -->
+  <script id="initialData" type="application/json">
+    <%- JSON.stringify(initialData || {}) %>
+  </script>
 
   <script src="/js/dashboard.js"></script>
 </body>
