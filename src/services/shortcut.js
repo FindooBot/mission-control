@@ -30,6 +30,7 @@ class ShortcutService {
       const response = await this.client.get('/member');
       this.userId = response.data.id;
       this.user = response.data;
+      console.log(`Shortcut user: ${this.user.name} (${this.userId})`);
       return response.data;
     } catch (error) {
       console.error('Failed to get Shortcut user:', error.message);
@@ -46,51 +47,56 @@ class ShortcutService {
         await this.getCurrentUser();
       }
 
-      console.log(`Fetching Shortcut stories for user ${this.userId} (${this.user?.name || 'unknown'})`);
+      console.log(`Fetching Shortcut stories for user ${this.userId}...`);
 
-      // Try multiple approaches to get stories
+      // Use search with owner filter - try different query formats
       let stories = [];
 
-      // Approach 1: Search for stories with owner_id filter
+      // Approach 1: Search with owner:me
       try {
+        console.log('Trying search with owner:me...');
         const response = await this.client.get('/search/stories', {
           params: {
-            query: '',  // Empty query, filter by owner
+            query: 'owner:me',
             page_size: 50
           }
         });
 
-        // Filter stories where user is owner
-        const allStories = response.data.data || [];
-        stories = allStories.filter(story => {
-          const owners = story.owner_ids || [];
-          return owners.includes(this.userId) || story.requested_by_id === this.userId;
-        });
-
-        console.log(`Found ${stories.length} stories from search`);
-      } catch (searchError) {
-        console.error('Search approach failed:', searchError.message);
-      }
-
-      // Approach 2: If search failed, try fetching all stories and filtering
-      if (stories.length === 0) {
+        stories = response.data.data || [];
+        console.log(`Found ${stories.length} stories with owner:me search`);
+      } catch (err1) {
+        console.log('owner:me search failed:', err1.message);
+        
+        // Approach 2: Search with specific user ID
         try {
-          console.log('Trying direct stories endpoint...');
-          const response = await this.client.get('/stories', {
+          console.log(`Trying search with owner:${this.userId}...`);
+          const response = await this.client.get('/search/stories', {
             params: {
-              page_size: 100
+              query: `owner:${this.userId}`,
+              page_size: 50
             }
           });
 
-          const allStories = response.data || [];
-          stories = allStories.filter(story => {
-            const owners = story.owner_ids || [];
-            return owners.includes(this.userId) || story.requested_by_id === this.userId;
-          });
+          stories = response.data.data || [];
+          console.log(`Found ${stories.length} stories with owner ID search`);
+        } catch (err2) {
+          console.log('owner ID search failed:', err2.message);
+        }
+      }
 
-          console.log(`Found ${stories.length} stories from direct endpoint`);
-        } catch (directError) {
-          console.error('Direct approach failed:', directError.message);
+      // Approach 3: Get user's workspace stories via member endpoint
+      if (stories.length === 0) {
+        try {
+          console.log('Trying member endpoint...');
+          const response = await this.client.get(`/member`);
+          const workspace2 = response.data.workspace2;
+          
+          if (workspace2?.stories) {
+            stories = workspace2.stories;
+            console.log(`Found ${stories.length} stories from member endpoint`);
+          }
+        } catch (err3) {
+          console.log('Member endpoint failed:', err3.message);
         }
       }
 
@@ -128,70 +134,43 @@ class ShortcutService {
   }
 
   /**
-   * Get unread notifications - Note: This endpoint may not exist in all Shortcut plans
+   * Get unread activity - Note: Shortcut doesn't have a traditional notifications API
+   * Instead we can look at recent activity on user's stories
    */
   async getNotifications() {
     try {
-      console.log('Fetching Shortcut notifications...');
+      console.log('Fetching Shortcut activity...');
 
-      // Try the notifications endpoint
-      const response = await this.client.get('/notifications');
+      // Get recent stories and check for updates
+      const stories = await this.getMyStories();
+      const notifications = [];
 
-      // Filter for unread notifications
-      const unreadNotifications = response.data.filter(
-        notification => notification.read === false
-      );
-
-      return unreadNotifications.map(notification => ({
-        notification_id: notification.id.toString(),
-        type: notification.type,
-        story_id: notification.story_id,
-        epic_id: notification.epic_id,
-        actor_id: notification.actor_id,
-        actor_name: notification.actor?.name || 'Unknown',
-        message: notification.text || notification.message || '',
-        read: notification.read ? 1 : 0,
-        notified_at: notification.updated_at || notification.created_at
-      }));
-    } catch (error) {
-      // Notifications API might not be available on all plans
-      if (error.response?.status === 404) {
-        console.log('Shortcut notifications endpoint not available (may require different plan)');
-      } else {
-        console.error('Failed to fetch Shortcut notifications:', error.message);
+      // Check for stories with recent updates that aren't by the user
+      for (const story of stories) {
+        // If story was updated recently and has comments/activity
+        // This is a simplified approach - Shortcut doesn't have a true notifications API
       }
+
+      console.log('Shortcut activity check complete (no notifications API available)');
+      return [];
+    } catch (error) {
+      console.log('Shortcut notifications not available:', error.message);
       return [];
     }
   }
 
   /**
-   * Mark a notification as read
+   * Mark a notification as read - Not implemented (no notifications API)
    */
   async markNotificationRead(notificationId) {
-    try {
-      await this.client.put(`/notifications/${notificationId}`, {
-        read: true
-      });
-      return true;
-    } catch (error) {
-      console.error('Failed to mark notification as read:', error.message);
-      return false;
-    }
+    return true; // No-op since we don't have real notifications
   }
 
   /**
-   * Mark all notifications as read
+   * Mark all notifications as read - Not implemented (no notifications API)
    */
   async markAllNotificationsRead() {
-    try {
-      await this.client.put('/notifications', {
-        read: true
-      });
-      return true;
-    } catch (error) {
-      console.error('Failed to mark all notifications as read:', error.message);
-      return false;
-    }
+    return true; // No-op since we don't have real notifications
   }
 }
 

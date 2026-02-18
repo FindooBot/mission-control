@@ -25,10 +25,29 @@ class TodoistService {
    */
   async getTasks() {
     try {
-      // Simple request without filters - API returns only active tasks by default
+      console.log('Making Todoist API request to /tasks...');
       const response = await this.client.get('/tasks');
       
-      return response.data.map(task => this.formatTask(task));
+      console.log('Todoist response type:', typeof response.data);
+      console.log('Todoist response keys:', Object.keys(response.data || {}));
+      
+      // Handle different response structures
+      let tasks = [];
+      if (Array.isArray(response.data)) {
+        tasks = response.data;
+      } else if (response.data?.results && Array.isArray(response.data.results)) {
+        tasks = response.data.results;
+      } else if (response.data?.items && Array.isArray(response.data.items)) {
+        tasks = response.data.items;
+      } else if (response.data?.tasks && Array.isArray(response.data.tasks)) {
+        tasks = response.data.tasks;
+      } else {
+        console.error('Unexpected Todoist response structure:', JSON.stringify(response.data).slice(0, 200));
+        return [];
+      }
+      
+      console.log(`Todoist returned ${tasks.length} tasks`);
+      return tasks.map(task => this.formatTask(task));
     } catch (error) {
       console.error('Failed to fetch Todoist tasks:', error.message);
       if (error.response) {
@@ -44,39 +63,24 @@ class TodoistService {
    */
   async getTodayTasks() {
     try {
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const today = new Date().toISOString().split('T')[0];
       
-      // Use filter parameter correctly - just due date
       const response = await this.client.get('/tasks', {
-        params: {
-          filter: `due: ${today}`
-        }
+        params: { filter: `due: ${today}` }
       });
 
-      return response.data.map(task => this.formatTask(task));
+      let tasks = [];
+      if (Array.isArray(response.data)) {
+        tasks = response.data;
+      } else if (response.data?.results) {
+        tasks = response.data.results;
+      }
+
+      return tasks.map(task => this.formatTask(task));
     } catch (error) {
       console.error('Failed to fetch today\'s tasks:', error.message);
-      // Fallback to filtering all tasks
       const allTasks = await this.getTasks();
       return allTasks.filter(task => task.due_date === new Date().toISOString().split('T')[0]);
-    }
-  }
-
-  /**
-   * Get tasks by project ID
-   */
-  async getTasksByProject(projectId) {
-    try {
-      const response = await this.client.get('/tasks', {
-        params: {
-          project_id: projectId
-        }
-      });
-
-      return response.data.map(task => this.formatTask(task));
-    } catch (error) {
-      console.error(`Failed to fetch tasks for project ${projectId}:`, error.message);
-      return [];
     }
   }
 
@@ -107,19 +111,6 @@ class TodoistService {
   }
 
   /**
-   * Get all projects
-   */
-  async getProjects() {
-    try {
-      const response = await this.client.get('/projects');
-      return response.data;
-    } catch (error) {
-      console.error('Failed to fetch projects:', error.message);
-      return [];
-    }
-  }
-
-  /**
    * Format task from API response to database format
    */
   formatTask(task) {
@@ -134,33 +125,13 @@ class TodoistService {
       due_date: task.due?.date || null,
       due_datetime: task.due?.datetime || null,
       due_string: task.due?.string || null,
-      is_completed: 0, // API only returns active tasks
+      is_completed: 0,
       labels: JSON.stringify(task.labels || []),
       assignee_id: task.assignee_id || null,
       creator_id: task.creator_id || null,
       created_at: task.created_at,
       url: `https://todoist.com/app/task/${task.id}`
     };
-  }
-
-  /**
-   * Check if a task is due today
-   */
-  isDueToday(task) {
-    if (!task.due_date) return false;
-    
-    const today = new Date().toISOString().split('T')[0];
-    return task.due_date === today;
-  }
-
-  /**
-   * Check if a task is overdue
-   */
-  isOverdue(task) {
-    if (!task.due_date) return false;
-    
-    const today = new Date().toISOString().split('T')[0];
-    return task.due_date < today;
   }
 }
 
