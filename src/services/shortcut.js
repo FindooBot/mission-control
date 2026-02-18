@@ -7,6 +7,16 @@ const axios = require('axios');
 
 const SHORTCUT_API_BASE = 'https://api.app.shortcut.com/api/v3';
 
+// Workflow state IDs from user's Shortcut workspace
+const ACTIVE_WORKFLOW_STATES = [
+  500033285, // Ready for Dev
+  500033283, // In Dev
+  500033286, // Code Review
+  500037066, // Product Check
+  500033282, // Backlog
+  500033374, // Ready for Release
+];
+
 class ShortcutService {
   constructor(apiToken) {
     this.apiToken = apiToken;
@@ -20,7 +30,7 @@ class ShortcutService {
     });
     this.userId = null;
     this.user = null;
-    this.userIdsToMatch = []; // Array of possible user ID formats
+    this.userIdsToMatch = [];
   }
 
   /**
@@ -35,19 +45,12 @@ class ShortcutService {
       // Collect all possible user ID formats
       this.userIdsToMatch = [this.userId];
       
-      // Some workspaces use numeric IDs
       if (this.user.member_id) {
         this.userIdsToMatch.push(String(this.user.member_id));
-        this.userIdsToMatch.push(Number(this.user.member_id));
-      }
-      
-      // Also try workspace-specific ID
-      if (this.user.workspace2?.id) {
-        this.userIdsToMatch.push(this.user.workspace2.id);
       }
       
       console.log(`Shortcut user: ${this.user?.name}`);
-      console.log(`  User IDs to match: ${JSON.stringify(this.userIdsToMatch)}`);
+      console.log(`  User ID: ${this.userId}`);
       
       return this.user;
     } catch (error) {
@@ -61,19 +64,10 @@ class ShortcutService {
    */
   isStoryOwner(story) {
     const owners = story.owner_ids || [];
-    
-    // Check each possible user ID format
-    for (const userId of this.userIdsToMatch) {
-      if (owners.includes(userId)) {
-        return true;
-      }
-      // Also try string comparison
-      if (owners.some(ownerId => String(ownerId) === String(userId))) {
-        return true;
-      }
-    }
-    
-    return false;
+    return owners.some(ownerId => {
+      const ownerStr = String(ownerId);
+      return this.userIdsToMatch.some(uid => String(uid) === ownerStr);
+    });
   }
 
   /**
@@ -89,180 +83,94 @@ class ShortcutService {
 
       let allStories = [];
 
-      // Approach 1: Get all stories from active workflow states (started, unstarted)
-      try {
-        console.log('Fetching stories from active workflow states...');
-        
-        const workflowsResponse = await this.client.get('/workflows');
-        const workflows = workflowsResponse.data || [];
-        
-        // Find active states (not 'done' type)
-        const activeStates = [];
-        for (const workflow of workflows) {
-          for (const state of workflow.states || []) {
-            if (state.type === 'unstarted' || state.type === 'started') {
-              activeStates.push(state);
+      // Approach 1: Fetch stories from specific workflow states
+      for (const stateId of ACTIVE_WORKFLOW_STATES) {
+        try {
+          console.log(`  Fetching from workflow state ${stateId}...`);
+          
+          // Try using the search endpoint
+          const response = await this.client.get('/search/stories', {
+            params: {
+              query: `state:${stateId}`,
+              page_size: 50
             }
-          }
+          });
+          
+          const stories = response.data?.data || [];
+          console.log(`    → ${stories.length} stories`);
+          allStories.push(...stories);
+        } catch (e) {
+          console.log(`    → Failed: ${e.message}`);
         }
+      }
+
+      // Remove duplicates
+      const seen = new Set();
+      allStories = allStories.filter(s => {
+        if (seen.has(s.id)) return false;
+        seen.add(s.id);
+        return true;
+      });
+
+      console.log(`Total unique stories from workflow states: ${allStories.length}`);
+
+      // Approach 2: If no stories found, try epics
+      if (allStories.length === 0) {
+        console.log('Trying epics...');
+        const epicsResponse = await this.client.get('/epics');
+        const epics = epicsResponse.data || [];
         
-        console.log(`  Found ${activeStates.length} active workflow states`);
-        
-        // Fetch stories from each active state using GET /stories with workflow_state_id param
-        for (const state of activeStates.slice(0, 5)) {
+        for (const epic of epics.slice(0, 10)) {
           try {
-            console.log(`  Fetching from: ${state.name} (${state.id})`);
-            const response = await this.client.get('/stories', {
-              params: {
-                workflow_state_id: state.id,
-                archived: false,
-                page_size: 50
-              }
-            });
-            
+            const response = await this.client.get(`/epics/${epic.id}/stories`);
             const stories = response.data || [];
-            console.log(`    → ${stories.length} stories`);
             allStories.push(...stories);
           } catch (e) {
-            console.log(`    → Failed: ${e.message}`);
+            // Ignore
           }
         }
         
         // Remove duplicates
-        const seen = new Set();
+        const seen2 = new Set();
         allStories = allStories.filter(s => {
-          if (seen.has(s.id)) return false;
-          seen.add(s.id);
+          if (seen2.has(s.id)) return false;
+          seen2.add(s.id);
           return true;
         });
         
-        console.log(`  Total unique stories: ${allStories.length}`);
-        
-        // Log first story's owner_ids for debugging
-        if (allStories.length > 0) {
-          console.log(`  Sample story owner_ids: ${JSON.stringify(allStories[0].owner_ids)}`);
-        }
-      } catch (err1) {
-        console.log('Workflow stories failed:', err1.message);
+        console.log(`Total from epics: ${allStories.length}`);
       }
 
-      // Approach 2: Get stories from projects (before epics)
-      if (allStories.length === 0) {
-        try {
-          console.log('Fetching stories from projects...');
-          const projectsResponse = await this.client.get('/projects');
-          const projects = projectsResponse.data || [];
-          console.log(`  Found ${projects.length} projects`);
-          
-          // Try first 5 projects
-          for (const project of projects.slice(0, 5)) {
-            try {
-              const response = await this.client.get(`/projects/${project.id}/stories`, {
-                params: { archived: false }
-              });
-              const stories = response.data || [];
-              if (stories.length > 0) {
-                console.log(`  ${project.name}: ${stories.length} stories`);
-                allStories.push(...stories);
-              }
-            } catch (e) {
-              // Ignore errors for individual projects
-            }
-          }
-          
-          // Remove duplicates
-          const seen = new Set();
-          allStories = allStories.filter(s => {
-            if (seen.has(s.id)) return false;
-            seen.add(s.id);
-            return true;
-          });
-          
-          console.log(`  Total unique stories from projects: ${allStories.length}`);
-          
-          if (allStories.length > 0) {
-            console.log(`  Sample story owner_ids: ${JSON.stringify(allStories[0].owner_ids)}`);
-          }
-        } catch (err2) {
-          console.log('Project stories failed:', err2.message);
-        }
-      }
-
-      // Approach 3: Get stories from multiple epics
-      if (allStories.length === 0) {
-        try {
-          console.log('Fetching stories from epics...');
-          const epicsResponse = await this.client.get('/epics');
-          const epics = epicsResponse.data || [];
-          console.log(`  Found ${epics.length} epics`);
-          
-          // Try first 5 epics
-          for (const epic of epics.slice(0, 5)) {
-            try {
-              const response = await this.client.get(`/epics/${epic.id}/stories`);
-              const stories = response.data || [];
-              if (stories.length > 0) {
-                console.log(`  ${epic.name}: ${stories.length} stories`);
-                allStories.push(...stories);
-              }
-            } catch (e) {
-              // Ignore errors for individual epics
-            }
-          }
-          
-          // Remove duplicates
-          const seen = new Set();
-          allStories = allStories.filter(s => {
-            if (seen.has(s.id)) return false;
-            seen.add(s.id);
-            return true;
-          });
-          
-          console.log(`  Total unique stories from epics: ${allStories.length}`);
-          
-          if (allStories.length > 0) {
-            console.log(`  Sample story owner_ids: ${JSON.stringify(allStories[0].owner_ids)}`);
-          }
-        } catch (err2) {
-          console.log('Epic stories failed:', err2.message);
-        }
-      }
-
-      // Filter for user's stories
+      // Filter for user's stories by owner
       console.log(`Filtering ${allStories.length} stories for user ownership...`);
-      
-      // First try owner_ids matching
       let myStories = allStories.filter(story => this.isStoryOwner(story));
-      console.log(`  Found ${myStories.length} stories by owner_ids`);
+      console.log(`  Found ${myStories.length} stories by owner`);
       
-      // If no matches, try requester_id matching (user created the story)
+      // Also try requester
       if (myStories.length === 0) {
-        console.log('  Trying requester_id...');
         myStories = allStories.filter(story => {
           const requesterId = story.requested_by_id;
           if (!requesterId) return false;
-          return this.userIdsToMatch.some(id => String(id) === String(requesterId));
+          return this.userIdsToMatch.some(uid => 
+            String(uid) === String(requesterId)
+          );
         });
-        console.log(`  Found ${myStories.length} stories by requester_id`);
+        console.log(`  Found ${myStories.length} stories by requester`);
       }
-      
-      // Debug: show all stories if still no matches
-      if (myStories.length === 0 && allStories.length > 0) {
-        console.log('  Debug - All stories owner/requester info:');
-        allStories.forEach((story, i) => {
-          const owners = story.owner_ids || [];
-          const requester = story.requested_by_id;
-          console.log(`    ${i + 1}. "${story.name?.substring(0, 40)}..."`);
-          console.log(`       owners: ${JSON.stringify(owners)}, requester: ${requester}`);
-        });
-      }
-      
-      console.log(`Found ${myStories.length} stories assigned to user`);
 
-      // Filter for active stories
+      // Debug if no matches
+      if (myStories.length === 0 && allStories.length > 0) {
+        console.log('Debug - Sample story info:');
+        allStories.slice(0, 3).forEach((story, i) => {
+          console.log(`  ${i + 1}. "${story.name?.substring(0, 40)}"`);
+          console.log(`     owners: ${JSON.stringify(story.owner_ids)}`);
+          console.log(`     workflow_state_id: ${story.workflow_state_id}`);
+        });
+      }
+
+      // Filter for active (not completed)
       const activeStories = myStories.filter(story => 
-        story.completed !== true && 
-        story.archived !== true
+        story.completed !== true && story.archived !== true
       );
 
       console.log(`Returning ${activeStories.length} active stories`);
@@ -292,24 +200,14 @@ class ShortcutService {
     }
   }
 
-  /**
-   * Get unread activity
-   */
   async getNotifications() {
-    console.log('Shortcut notifications not available via API');
     return [];
   }
 
-  /**
-   * Mark a notification as read
-   */
   async markNotificationRead(notificationId) {
     return true;
   }
 
-  /**
-   * Mark all notifications as read
-   */
   async markAllNotificationsRead() {
     return true;
   }
