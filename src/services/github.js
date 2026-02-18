@@ -1,19 +1,15 @@
 /**
  * GitHub Service
- * Interacts with GitHub REST API and gh CLI for private repos
+ * Interacts with GitHub REST API
  */
 
 const axios = require('axios');
-const { exec } = require('child_process');
-const { promisify } = require('util');
 
-const execAsync = promisify(exec);
 const GITHUB_API_BASE = 'https://api.github.com';
 
 class GitHubService {
   constructor(config) {
     this.token = config.personalAccessToken;
-    this.useGhCli = config.useGhCli !== false;
     this.privateRepo = config.privateRepo || 'KimonoIM/web';
     
     this.client = axios.create({
@@ -28,14 +24,16 @@ class GitHubService {
   }
 
   /**
-   * Get open PRs from a public repository via REST API
+   * Get open PRs from a repository via REST API
    */
-  async getPublicPRs(repoFullName) {
+  async getPRs(repoFullName) {
     try {
       const [owner, repo] = repoFullName.split('/');
       if (!owner || !repo) {
         throw new Error(`Invalid repo format: ${repoFullName}`);
       }
+
+      console.log(`Fetching PRs for ${owner}/${repo}...`);
 
       const response = await this.client.get(`/repos/${owner}/${repo}/pulls`, {
         params: {
@@ -45,6 +43,8 @@ class GitHubService {
           per_page: 50
         }
       });
+
+      console.log(`Found ${response.data.length} PRs for ${repoFullName}`);
 
       // Fetch reviews for each PR to determine approval status
       const prsWithReviews = await Promise.all(
@@ -56,7 +56,12 @@ class GitHubService {
 
       return prsWithReviews.map(pr => this.formatPR(pr, owner, repo));
     } catch (error) {
-      console.error(`Failed to fetch public PRs for ${repoFullName}:`, error.message);
+      console.error(`Failed to fetch PRs for ${repoFullName}:`, error.message);
+      if (error.response?.status === 404) {
+        console.log('  → Repository not found or token lacks access');
+      } else if (error.response?.status === 401) {
+        console.log('  → Authentication failed - check your GitHub token');
+      }
       return [];
     }
   }
@@ -77,61 +82,15 @@ class GitHubService {
   }
 
   /**
-   * Get PRs from private repo using gh CLI
-   */
-  async getPrivatePRs(repoFullName) {
-    try {
-      console.log(`Attempting to fetch private PRs for ${repoFullName} using gh CLI...`);
-      
-      const { stdout } = await execAsync(
-        `gh pr list --repo ${repoFullName} --json number,title,author,createdAt,updatedAt,url,isDraft,headRefName,baseRefName,state,body --state open`,
-        { timeout: 15000 }
-      );
-
-      const prs = JSON.parse(stdout);
-      const [owner, repo] = repoFullName.split('/');
-
-      // Fetch reviews for each PR
-      const prsWithReviews = await Promise.all(
-        prs.map(async (pr) => {
-          const reviews = await this.getPRReviews(owner, repo, pr.number);
-          return { ...pr, reviews };
-        })
-      );
-
-      return prsWithReviews.map(pr => this.formatGhPR(pr, owner, repo));
-    } catch (error) {
-      console.error(`Failed to fetch private PRs for ${repoFullName} via gh CLI:`, error.message);
-      
-      // If gh CLI auth failed, provide helpful message
-      if (error.message.includes('401') || error.message.includes('authentication')) {
-        console.log('⚠️  GitHub CLI authentication required. Run "gh auth login" on your host machine.');
-        console.log('   The gh auth token should be mounted into the Docker container.');
-      }
-      
-      // Fallback to REST API
-      console.log('Falling back to REST API (may fail if token lacks repo access)...');
-      return this.getPublicPRs(repoFullName);
-    }
-  }
-
-  /**
    * Get all PRs for configured repos
    */
   async getAllPRs() {
-    const repos = [
-      { name: this.privateRepo || 'KimonoIM/web', isPrivate: true }
-    ];
+    const repos = [this.privateRepo];
 
     const allPRs = [];
     
     for (const repo of repos) {
-      let prs;
-      if (repo.isPrivate && this.useGhCli) {
-        prs = await this.getPrivatePRs(repo.name);
-      } else {
-        prs = await this.getPublicPRs(repo.name);
-      }
+      const prs = await this.getPRs(repo);
       allPRs.push(...prs);
     }
 
@@ -214,45 +173,6 @@ class GitHubService {
       updated_at: pr.updated_at,
       html_url: pr.html_url,
       review_requested: pr.requested_reviewers?.length > 0 ? 1 : 0,
-      // New fields for review status
-      has_approval: hasApproval ? 1 : 0,
-      has_changes_requested: hasChangesRequested ? 1 : 0,
-      review_count: reviewCount
-    };
-  }
-
-  /**
-   * Format PR from gh CLI response
-   */
-  formatGhPR(pr, owner, repo) {
-    // Check review status
-    const reviews = pr.reviews || [];
-    const latestReviews = this.getLatestReviews(reviews);
-    const hasApproval = latestReviews.some(r => r.state === 'APPROVED');
-    const hasChangesRequested = latestReviews.some(r => r.state === 'CHANGES_REQUESTED');
-    const reviewCount = latestReviews.length;
-
-    return {
-      pr_id: pr.number, // gh CLI doesn't provide ID, use number
-      number: pr.number,
-      title: pr.title,
-      body: pr.body || '',
-      state: pr.state || 'open',
-      repo_owner: owner,
-      repo_name: repo,
-      author_login: pr.author?.login || 'unknown',
-      author_avatar: pr.author?.avatarUrl || '',
-      head_branch: pr.headRefName,
-      base_branch: pr.baseRefName,
-      draft: pr.isDraft ? 1 : 0,
-      mergeable: null,
-      merged: 0,
-      merged_at: null,
-      created_at: pr.createdAt,
-      updated_at: pr.updatedAt,
-      html_url: pr.url,
-      review_requested: 0, // gh CLI doesn't provide this
-      // New fields for review status
       has_approval: hasApproval ? 1 : 0,
       has_changes_requested: hasChangesRequested ? 1 : 0,
       review_count: reviewCount

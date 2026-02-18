@@ -119,10 +119,18 @@ class Scheduler {
         return;
       }
 
+      console.log('🚀 Fetching Shortcut data...');
       const shortcut = new ShortcutService(this.config.shortcut.apiToken);
       
       // Fetch stories
       const stories = await shortcut.getMyStories();
+      
+      if (stories.length === 0) {
+        console.log('⚠️ No Shortcut stories found for current user');
+      } else {
+        console.log(`🚀 Fetched ${stories.length} Shortcut stories`);
+      }
+      
       this.db.upsertShortcutStories(stories);
 
       // Fetch notifications
@@ -173,10 +181,18 @@ class Scheduler {
         return;
       }
 
+      console.log('📋 Fetching Todoist tasks...');
       const todoist = new TodoistService(this.config.todoist.apiToken);
       
       // Fetch all tasks
       const tasks = await todoist.getTasks();
+      
+      if (tasks.length === 0) {
+        console.log('⚠️ No Todoist tasks returned from API');
+      } else {
+        console.log(`📋 Fetched ${tasks.length} Todoist tasks`);
+      }
+      
       this.db.upsertTodoistTasks(tasks);
 
       this.lastFetchTimes.todoist = new Date().toISOString();
