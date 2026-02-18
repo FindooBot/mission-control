@@ -137,9 +137,6 @@
       <% if (enabledServices.shortcut) { %>
       <button class="tab-btn" data-tab="shortcut">Shortcut <span id="shortcutNotifCount"></span></button>
       <% } %>
-      <% if (enabledServices.figma) { %>
-      <button class="tab-btn" data-tab="figma">Figma <span id="figmaNotifCount"></span></button>
-      <% } %>
     </div>
     <div class="notification-panel-content">
       <% if (enabledServices.github) { %>
@@ -155,16 +152,6 @@
       <% if (enabledServices.shortcut) { %>
       <!-- Shortcut Notifications Tab -->
       <div class="tab-content" id="shortcutNotifications">
-        <div class="notification-loading">
-          <div class="spinner"></div>
-          <span>Loading notifications...</span>
-        </div>
-      </div>
-      <% } %>
-      
-      <% if (enabledServices.figma) { %>
-      <!-- Figma Notifications Tab -->
-      <div class="tab-content" id="figmaNotifications">
         <div class="notification-loading">
           <div class="spinner"></div>
           <span>Loading notifications...</span>

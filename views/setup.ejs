@@ -38,9 +38,6 @@
         </script>
       <% } else { %>
         <form action="/setup" method="POST" class="setup-form">
-          <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">
-            💡 All fields are optional. Fill in only the services you want to use.
-          </p>
           
           <!-- Calendar Section -->
           <div class="form-section">
@@ -116,18 +113,6 @@
                      value="<%= config.todoist?.apiToken || '' %>"
                      placeholder="xxxxxxxxxxxx">
               <span class="help-text">Todoist Settings → Integrations → API token</span>
-            </div>
-          </div>
-
-          <!-- Figma Section -->
-          <div class="form-section">
-            <h2>🎨 Figma</h2>
-            <div class="form-group">
-              <label for="figmaToken">Personal Access Token</label>
-              <input type="password" id="figmaToken" name="figmaToken" 
-                     value="<%= config.figma?.apiToken || '' %>"
-                     placeholder="figd_xxxxxxxxxxxx">
-              <span class="help-text">Figma Settings → Personal Access Tokens</span>
             </div>
           </div>
 

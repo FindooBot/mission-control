@@ -202,8 +202,6 @@ function initNotificationPanel() {
       await markAllGitHubNotificationsRead();
     } else if (activeTab === 'shortcut') {
       await markAllShortcutNotificationsRead();
-    } else if (activeTab === 'figma') {
-      await markAllFigmaNotificationsRead();
     }
   });
 }
@@ -214,10 +212,9 @@ function initNotificationPanel() {
 function renderNotificationPanel() {
   const githubNotifs = dashboardData.githubNotifications || [];
   const shortcutNotifs = dashboardData.shortcutNotifications || [];
-  const figmaNotifs = dashboardData.figmaNotifications || [];
 
   // Update header count
-  const totalCount = githubNotifs.length + shortcutNotifs.length + figmaNotifs.length;
+  const totalCount = githubNotifs.length + shortcutNotifs.length;
   const headerCount = document.getElementById('headerNotificationCount');
   if (headerCount) {
     headerCount.textContent = totalCount;
@@ -227,19 +224,14 @@ function renderNotificationPanel() {
   // Update tab counts
   const githubCount = document.getElementById('githubNotifCount');
   const shortcutCount = document.getElementById('shortcutNotifCount');
-  const figmaCount = document.getElementById('figmaNotifCount');
   if (githubCount) githubCount.textContent = `(${githubNotifs.length})`;
   if (shortcutCount) shortcutCount.textContent = `(${shortcutNotifs.length})`;
-  if (figmaCount) figmaCount.textContent = `(${figmaNotifs.length})`;
 
   // Render GitHub notifications
   renderGitHubNotifications(githubNotifs);
 
   // Render Shortcut notifications
   renderShortcutNotifications(shortcutNotifs);
-
-  // Render Figma notifications
-  renderFigmaNotifications(figmaNotifs);
 }
 
 /**
@@ -425,10 +417,6 @@ async function dismissNotification(event, notificationId, type) {
         dashboardData.shortcutNotifications = dashboardData.shortcutNotifications.filter(
           n => n.notification_id !== notificationId
         );
-      } else if (type === 'figma') {
-        dashboardData.figmaNotifications = dashboardData.figmaNotifications.filter(
-          n => n.notification_id !== notificationId
-        );
       }
 
       renderNotificationPanel();
@@ -464,78 +452,6 @@ async function markAllGitHubNotificationsRead() {
 /**
  * Render Figma notifications in panel
  */
-function renderFigmaNotifications(notifications) {
-  const container = document.getElementById('figmaNotifications');
-
-  if (notifications.length === 0) {
-    container.innerHTML = `
-      <div class="notification-empty">
-        <div class="notification-empty-icon">🎨</div>
-        <p>No unread notifications</p>
-        <span>You're all caught up!</span>
-      </div>
-    `;
-    return;
-  }
-
-  const html = notifications.map(notif => {
-    const timeAgoText = timeAgo(notif.created_at);
-    const badge = notif.is_mention ? '<span class="notification-badge-mention">@mention</span>' : '';
-
-    return `
-      <div class="notification-item" data-id="${notif.notification_id}"
-           onclick="openFigmaNotification('${notif.url}', '${notif.notification_id}')">
-        <div class="notification-icon">🎨</div>
-        <div class="notification-content">
-          <div class="notification-title">${escapeHtml(notif.file_name)} ${badge}</div>
-          <div class="notification-message">${escapeHtml(notif.message)}</div>
-          <div class="notification-meta">
-            <span class="notification-author">${escapeHtml(notif.author)}</span>
-            <span class="notification-time">${timeAgoText}</span>
-          </div>
-        </div>
-        <button class="notification-dismiss" onclick="dismissNotification(event, '${notif.notification_id}', 'figma')"
-                title="Mark as read">
-          ×
-        </button>
-      </div>
-    `;
-  }).join('');
-
-  container.innerHTML = html;
-}
-
-/**
- * Open Figma notification
- */
-async function openFigmaNotification(url, notificationId) {
-  if (url) {
-    window.open(url, '_blank');
-  }
-
-  await dismissNotification(null, notificationId, 'figma');
-}
-
-/**
- * Mark all Figma notifications as read
- */
-async function markAllFigmaNotificationsRead() {
-  try {
-    const response = await fetch('/api/notifications/figma/read-all', {
-      method: 'POST'
-    });
-
-    if (response.ok) {
-      dashboardData.figmaNotifications = [];
-      renderNotificationPanel();
-      showToast('All Figma notifications marked as read', 'success');
-    }
-  } catch (error) {
-    console.error('Failed to mark all notifications as read:', error);
-    showToast('Failed to mark notifications as read', 'error');
-  }
-}
-
 /**
  * Mark all Shortcut notifications as read
  */

@@ -112,18 +112,6 @@
           </div>
         </div>
 
-        <!-- Figma Section -->
-        <div class="form-section">
-          <h2>🎨 Figma</h2>
-          <div class="form-group">
-            <label for="figmaToken">Personal Access Token</label>
-            <input type="password" id="figmaToken" name="figmaToken" 
-                   value="<%= config.figma?.apiToken || '' %>"
-                   placeholder="Enter new token to change">
-            <span class="help-text">Figma Settings → Personal Access Tokens. Leave as-is to keep current token.</span>
-          </div>
-        </div>
-
         <div class="form-actions" style="display: flex; gap: 12px;">
           <a href="/" class="btn btn-secondary" style="flex: 1;">← Back to Dashboard</a>
           <button type="submit" class="btn btn-primary" style="flex: 1;">
