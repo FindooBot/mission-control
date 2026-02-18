@@ -34,7 +34,38 @@ class DatabaseManager {
     // Create tables
     this.createTables();
     
+    // Run migrations
+    this.runMigrations();
+    
     console.log('📁 Database initialized at', DB_PATH);
+  }
+
+  /**
+   * Run migrations for schema updates
+   */
+  runMigrations() {
+    try {
+      // Migration: Add review columns to github_prs if they don't exist
+      const tableInfo = this.db.prepare("PRAGMA table_info(github_prs)").all();
+      const columns = tableInfo.map(col => col.name);
+      
+      if (!columns.includes('has_approval')) {
+        this.db.exec(`ALTER TABLE github_prs ADD COLUMN has_approval BOOLEAN DEFAULT 0`);
+        console.log('🔄 Migration: Added has_approval column to github_prs');
+      }
+      
+      if (!columns.includes('has_changes_requested')) {
+        this.db.exec(`ALTER TABLE github_prs ADD COLUMN has_changes_requested BOOLEAN DEFAULT 0`);
+        console.log('🔄 Migration: Added has_changes_requested column to github_prs');
+      }
+      
+      if (!columns.includes('review_count')) {
+        this.db.exec(`ALTER TABLE github_prs ADD COLUMN review_count INTEGER DEFAULT 0`);
+        console.log('🔄 Migration: Added review_count column to github_prs');
+      }
+    } catch (error) {
+      console.error('Migration error:', error.message);
+    }
   }
 
   /**
@@ -125,7 +156,10 @@ class DatabaseManager {
         created_at DATETIME,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         html_url TEXT,
-        review_requested BOOLEAN DEFAULT 0
+        review_requested BOOLEAN DEFAULT 0,
+        has_approval BOOLEAN DEFAULT 0,
+        has_changes_requested BOOLEAN DEFAULT 0,
+        review_count INTEGER DEFAULT 0
       );
       CREATE INDEX IF NOT EXISTS idx_prs_state ON github_prs(state);
       CREATE INDEX IF NOT EXISTS idx_prs_review ON github_prs(review_requested);
@@ -286,11 +320,11 @@ class DatabaseManager {
       INSERT INTO github_prs 
         (pr_id, number, title, body, state, repo_owner, repo_name, author_login, 
          author_avatar, head_branch, base_branch, draft, mergeable, merged, merged_at,
-         created_at, updated_at, html_url, review_requested)
+         created_at, updated_at, html_url, review_requested, has_approval, has_changes_requested, review_count)
       VALUES 
         (@pr_id, @number, @title, @body, @state, @repo_owner, @repo_name, @author_login,
          @author_avatar, @head_branch, @base_branch, @draft, @mergeable, @merged, @merged_at,
-         @created_at, @updated_at, @html_url, @review_requested)
+         @created_at, @updated_at, @html_url, @review_requested, @has_approval, @has_changes_requested, @review_count)
       ON CONFLICT(pr_id) DO UPDATE SET
         title = excluded.title,
         body = excluded.body,
@@ -302,7 +336,10 @@ class DatabaseManager {
         merged = excluded.merged,
         merged_at = excluded.merged_at,
         updated_at = excluded.updated_at,
-        review_requested = excluded.review_requested
+        review_requested = excluded.review_requested,
+        has_approval = excluded.has_approval,
+        has_changes_requested = excluded.has_changes_requested,
+        review_count = excluded.review_count
     `);
 
     const insertMany = this.db.transaction((prs) => {

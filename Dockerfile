@@ -2,8 +2,11 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install dependencies for better-sqlite3
-RUN apk add --no-cache python3 make g++
+# Install dependencies for better-sqlite3 and GitHub CLI
+RUN apk add --no-cache python3 make g++ curl
+
+# Install GitHub CLI
+RUN apk add --no-cache github-cli
 
 # Copy package files
 COPY package*.json ./

@@ -405,6 +405,22 @@ function renderGitHubWidget() {
   
   const html = sortedPRs.slice(0, 10).map(pr => {
     const draftBadge = pr.draft ? '<span class="pr-draft-badge">Draft</span>' : '';
+    
+    // Review status badges
+    let reviewBadges = '';
+    if (pr.has_approval) {
+      reviewBadges += '<span class="pr-badge pr-approved">✓ Approved</span>';
+    }
+    if (pr.has_changes_requested) {
+      reviewBadges += '<span class="pr-badge pr-changes">⚠ Changes Requested</span>';
+    }
+    if (!pr.has_approval && !pr.has_changes_requested && pr.review_count > 0) {
+      reviewBadges += `<span class="pr-badge pr-reviewing">👁 Reviewed (${pr.review_count})</span>`;
+    }
+    if (pr.review_count === 0 && !pr.draft) {
+      reviewBadges += '<span class="pr-badge pr-pending">⏳ Pending Review</span>';
+    }
+    
     const timeAgoText = timeAgo(pr.updated_at);
     
     return `
@@ -415,6 +431,7 @@ function renderGitHubWidget() {
           ${draftBadge}
         </div>
         <div class="pr-title" onclick="openLink('${pr.html_url}')">${escapeHtml(pr.title)}</div>
+        <div class="pr-badges">${reviewBadges}</div>
         <div class="pr-footer">
           <div class="pr-author">
             ${pr.author_avatar ? `<img src="${pr.author_avatar}" alt="" class="pr-author-avatar">` : ''}

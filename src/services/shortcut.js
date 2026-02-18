@@ -36,7 +36,7 @@ class ShortcutService {
   }
 
   /**
-   * Get stories where user is owner
+   * Get stories where user is owner using search API
    */
   async getMyStories() {
     try {
@@ -44,15 +44,19 @@ class ShortcutService {
         await this.getCurrentUser();
       }
 
-      // Fetch stories where user is owner
-      const response = await this.client.get('/stories', {
+      // Use search endpoint to find stories owned by current user
+      // Search query: owner:me state:unstarted,started
+      const response = await this.client.get('/search/stories', {
         params: {
-          owner_id: this.userId
+          query: `owner:me is:story`,
+          page_size: 25
         }
       });
 
-      // Filter for active stories (not completed)
-      const activeStories = response.data.filter(story => 
+      const stories = response.data.data || [];
+
+      // Filter for active stories (not completed/archived)
+      const activeStories = stories.filter(story => 
         story.completed === false && 
         story.archived === false
       );
@@ -62,7 +66,7 @@ class ShortcutService {
         name: story.name,
         description: story.description || '',
         story_type: story.story_type,
-        state: story.workflow_state_id,
+        state: story.workflow_state_name || story.workflow_state_id,
         workflow_state_id: story.workflow_state_id,
         project_id: story.project_id,
         epic_id: story.epic_id,
@@ -78,6 +82,10 @@ class ShortcutService {
       }));
     } catch (error) {
       console.error('Failed to fetch Shortcut stories:', error.message);
+      if (error.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response data:', error.response.data);
+      }
       return [];
     }
   }
@@ -107,6 +115,9 @@ class ShortcutService {
       }));
     } catch (error) {
       console.error('Failed to fetch Shortcut notifications:', error.message);
+      if (error.response) {
+        console.error('Response status:', error.response.status);
+      }
       return [];
     }
   }

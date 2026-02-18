@@ -46,9 +46,32 @@ class GitHubService {
         }
       });
 
-      return response.data.map(pr => this.formatPR(pr, owner, repo));
+      // Fetch reviews for each PR to determine approval status
+      const prsWithReviews = await Promise.all(
+        response.data.map(async (pr) => {
+          const reviews = await this.getPRReviews(owner, repo, pr.number);
+          return { ...pr, reviews };
+        })
+      );
+
+      return prsWithReviews.map(pr => this.formatPR(pr, owner, repo));
     } catch (error) {
       console.error(`Failed to fetch public PRs for ${repoFullName}:`, error.message);
+      return [];
+    }
+  }
+
+  /**
+   * Get reviews for a specific PR
+   */
+  async getPRReviews(owner, repo, prNumber) {
+    try {
+      const response = await this.client.get(
+        `/repos/${owner}/${repo}/pulls/${prNumber}/reviews`
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Failed to fetch reviews for PR #${prNumber}:`, error.message);
       return [];
     }
   }
@@ -66,27 +89,15 @@ class GitHubService {
       const prs = JSON.parse(stdout);
       const [owner, repo] = repoFullName.split('/');
 
-      return prs.map(pr => ({
-        pr_id: pr.number,
-        number: pr.number,
-        title: pr.title,
-        body: pr.body || '',
-        state: pr.state || 'open',
-        repo_owner: owner,
-        repo_name: repo,
-        author_login: pr.author?.login || 'unknown',
-        author_avatar: pr.author?.avatarUrl || '',
-        head_branch: pr.headRefName,
-        base_branch: pr.baseRefName,
-        draft: pr.isDraft ? 1 : 0,
-        mergeable: null,
-        merged: 0,
-        merged_at: null,
-        created_at: pr.createdAt,
-        updated_at: pr.updatedAt,
-        html_url: pr.url,
-        review_requested: 0
-      }));
+      // Fetch reviews for each PR
+      const prsWithReviews = await Promise.all(
+        prs.map(async (pr) => {
+          const reviews = await this.getPRReviews(owner, repo, pr.number);
+          return { ...pr, reviews };
+        })
+      );
+
+      return prsWithReviews.map(pr => this.formatGhPR(pr, owner, repo));
     } catch (error) {
       console.error(`Failed to fetch private PRs for ${repoFullName}:`, error.message);
       // Fallback to REST API if gh CLI fails
@@ -100,8 +111,7 @@ class GitHubService {
    */
   async getAllPRs() {
     const repos = [
-      { name: 'KimonoIM/web', isPrivate: true },
-      { name: 'FindooBot/mission-control', isPrivate: false }
+      { name: this.privateRepo || 'KimonoIM/web', isPrivate: true }
     ];
 
     const allPRs = [];
@@ -168,6 +178,13 @@ class GitHubService {
    * Format PR from API response to database format
    */
   formatPR(pr, owner, repo) {
+    // Check review status
+    const reviews = pr.reviews || [];
+    const latestReviews = this.getLatestReviews(reviews);
+    const hasApproval = latestReviews.some(r => r.state === 'APPROVED');
+    const hasChangesRequested = latestReviews.some(r => r.state === 'CHANGES_REQUESTED');
+    const reviewCount = latestReviews.length;
+
     return {
       pr_id: pr.id,
       number: pr.number,
@@ -187,8 +204,69 @@ class GitHubService {
       created_at: pr.created_at,
       updated_at: pr.updated_at,
       html_url: pr.html_url,
-      review_requested: pr.requested_reviewers?.length > 0 ? 1 : 0
+      review_requested: pr.requested_reviewers?.length > 0 ? 1 : 0,
+      // New fields for review status
+      has_approval: hasApproval ? 1 : 0,
+      has_changes_requested: hasChangesRequested ? 1 : 0,
+      review_count: reviewCount
     };
+  }
+
+  /**
+   * Format PR from gh CLI response
+   */
+  formatGhPR(pr, owner, repo) {
+    // Check review status
+    const reviews = pr.reviews || [];
+    const latestReviews = this.getLatestReviews(reviews);
+    const hasApproval = latestReviews.some(r => r.state === 'APPROVED');
+    const hasChangesRequested = latestReviews.some(r => r.state === 'CHANGES_REQUESTED');
+    const reviewCount = latestReviews.length;
+
+    return {
+      pr_id: pr.number, // gh CLI doesn't provide ID, use number
+      number: pr.number,
+      title: pr.title,
+      body: pr.body || '',
+      state: pr.state || 'open',
+      repo_owner: owner,
+      repo_name: repo,
+      author_login: pr.author?.login || 'unknown',
+      author_avatar: pr.author?.avatarUrl || '',
+      head_branch: pr.headRefName,
+      base_branch: pr.baseRefName,
+      draft: pr.isDraft ? 1 : 0,
+      mergeable: null,
+      merged: 0,
+      merged_at: null,
+      created_at: pr.createdAt,
+      updated_at: pr.updatedAt,
+      html_url: pr.url,
+      review_requested: 0, // gh CLI doesn't provide this
+      // New fields for review status
+      has_approval: hasApproval ? 1 : 0,
+      has_changes_requested: hasChangesRequested ? 1 : 0,
+      review_count: reviewCount
+    };
+  }
+
+  /**
+   * Get latest review from each reviewer
+   */
+  getLatestReviews(reviews) {
+    const reviewMap = new Map();
+    
+    // Sort by submitted_at to get chronological order
+    const sortedReviews = [...reviews].sort((a, b) => 
+      new Date(a.submitted_at) - new Date(b.submitted_at)
+    );
+
+    // Keep only the latest review from each user
+    for (const review of sortedReviews) {
+      reviewMap.set(review.user?.login || review.user?.id, review);
+    }
+
+    return Array.from(reviewMap.values());
   }
 }
 

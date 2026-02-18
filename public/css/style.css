@@ -885,6 +885,41 @@ input::placeholder {
   color: var(--text-secondary);
 }
 
+/* PR Review Status Badges */
+.pr-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.pr-badge {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.pr-approved {
+  background: rgba(52, 199, 89, 0.15);
+  color: var(--accent-green);
+}
+
+.pr-changes {
+  background: rgba(255, 59, 48, 0.15);
+  color: var(--accent-red);
+}
+
+.pr-reviewing {
+  background: rgba(175, 82, 222, 0.15);
+  color: var(--accent-purple);
+}
+
+.pr-pending {
+  background: rgba(255, 149, 0, 0.15);
+  color: var(--accent-orange);
+}
+
 .pr-title {
   font-size: 15px;
   font-weight: 500;

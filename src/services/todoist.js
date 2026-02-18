@@ -25,11 +25,16 @@ class TodoistService {
    */
   async getTasks() {
     try {
+      // Simple request without filters - API returns only active tasks by default
       const response = await this.client.get('/tasks');
       
       return response.data.map(task => this.formatTask(task));
     } catch (error) {
       console.error('Failed to fetch Todoist tasks:', error.message);
+      if (error.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response data:', error.response.data);
+      }
       return [];
     }
   }
@@ -41,16 +46,19 @@ class TodoistService {
     try {
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       
+      // Use filter parameter correctly - just due date
       const response = await this.client.get('/tasks', {
         params: {
-          filter: `due before: ${today} | due: ${today}`
+          filter: `due: ${today}`
         }
       });
 
       return response.data.map(task => this.formatTask(task));
     } catch (error) {
       console.error('Failed to fetch today\'s tasks:', error.message);
-      return [];
+      // Fallback to filtering all tasks
+      const allTasks = await this.getTasks();
+      return allTasks.filter(task => task.due_date === new Date().toISOString().split('T')[0]);
     }
   }
 
@@ -131,7 +139,7 @@ class TodoistService {
       assignee_id: task.assignee_id || null,
       creator_id: task.creator_id || null,
       created_at: task.created_at,
-      url: task.url
+      url: `https://todoist.com/app/task/${task.id}`
     };
   }
 
