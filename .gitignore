@@ -12,9 +12,3 @@ yarn-error.log*
 # Tauri build artifacts
 src-tauri/target/
 src-tauri/gen/
-
-# Generated icon files (can be regenerated with npm run icon)
-src-tauri/icons/*.icns
-src-tauri/icons/*.ico
-src-tauri/icons/*.png
-!src-tauri/icons/icon.svg
