@@ -37,14 +37,15 @@ npm run tauri:build
 ```
 
 After building, find your app at:
-- **DMG Installer**: `src-tauri/target/release/bundle/dmg/Mission-Control_1.0.0_x64.dmg`
-- **App Bundle**: `src-tauri/target/release/bundle/macos/Mission Control.app`
+- **App Bundle**: `src-tauri/target/release/bundle/macos/mission-control.app`
 
-Features:
-- Native macOS menu bar integration
-- System tray (click icon to show/hide)
-- Auto-starts the server
-- Close button minimizes to tray
+**Migrating from Docker:**
+```bash
+# Copy your Docker config to the Tauri app
+./copy-config.sh
+```
+
+**Config location:** Tauri app stores config in `~/.mission-control/config.json` (separate from Docker's `config/config.json`)
 
 See [TAURI.md](TAURI.md) for detailed build instructions.
 
@@ -161,7 +162,8 @@ mission-control/
 │   ├── src/
 │   └── icons/
 ├── data/                  # SQLite database (gitignored)
-├── config/                # Config files (gitignored)
+├── config/                # Docker config files (gitignored)
+├── copy-config.sh         # Script to copy config from Docker to Tauri
 ├── Dockerfile
 ├── docker-compose.yml
 └── package.json
@@ -196,6 +198,15 @@ npm run tauri:build
 ```bash
 xattr -cr "/Applications/Mission Control.app"
 ```
+
+### White screen in Tauri app
+The app window may appear white while the Node.js server starts. If it persists:
+1. Make sure you don't have Docker running on port 1337
+2. Check Console.app for error messages from "mission-control"
+3. Try running the binary directly to see errors:
+   ```bash
+   ./src-tauri/target/release/mission-control
+   ```
 
 ### Todoist tasks not updating
 Completed tasks are filtered out every fetch cycle. If you see completed tasks:
