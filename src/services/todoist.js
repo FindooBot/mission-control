@@ -48,8 +48,17 @@ class TodoistService {
       
       console.log(`Todoist returned ${tasks.length} total tasks`);
       
-      // Filter out completed tasks - Todoist API v1 may return all tasks
-      const activeTasks = tasks.filter(task => !task.is_completed && !task.completed);
+      // Filter out completed tasks - check both is_completed and completed fields
+      const activeTasks = tasks.filter(task => {
+        // Check all possible completed field names
+        if (task.is_completed === true) return false;
+        if (task.completed === true) return false;
+        if (task.checked === true) return false;
+        // Also check for string "true"
+        if (String(task.is_completed).toLowerCase() === 'true') return false;
+        if (String(task.completed).toLowerCase() === 'true') return false;
+        return true;
+      });
       console.log(`Filtered to ${activeTasks.length} active tasks`);
       
       return activeTasks.map(task => this.formatTask(task));

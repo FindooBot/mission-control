@@ -31,6 +31,7 @@ class ShortcutService {
     this.userId = null;
     this.user = null;
     this.userIdsToMatch = [];
+    this.workflowStateMap = new Map(); // Map state IDs to names
   }
 
   /**
@@ -60,6 +61,37 @@ class ShortcutService {
   }
 
   /**
+   * Load workflow states to map IDs to names
+   */
+  async loadWorkflowStates() {
+    try {
+      const response = await this.client.get('/workflows');
+      const workflows = response.data || [];
+      
+      for (const workflow of workflows) {
+        for (const state of workflow.states || []) {
+          this.workflowStateMap.set(state.id, state.name);
+          this.workflowStateMap.set(String(state.id), state.name);
+        }
+      }
+      
+      console.log(`Loaded ${this.workflowStateMap.size / 2} workflow states`);
+    } catch (error) {
+      console.error('Failed to load workflow states:', error.message);
+    }
+  }
+
+  /**
+   * Get state name from ID
+   */
+  getStateName(stateId) {
+    if (!stateId) return 'Unknown';
+    return this.workflowStateMap.get(stateId) || 
+           this.workflowStateMap.get(String(stateId)) || 
+           'Unknown';
+  }
+
+  /**
    * Check if user is owner of story
    */
   isStoryOwner(story) {
@@ -78,6 +110,9 @@ class ShortcutService {
       if (!this.userId) {
         await this.getCurrentUser();
       }
+      
+      // Load workflow states for name mapping
+      await this.loadWorkflowStates();
 
       console.log(`Fetching Shortcut stories...`);
 
@@ -180,7 +215,7 @@ class ShortcutService {
         name: story.name,
         description: story.description || '',
         story_type: story.story_type,
-        state: story.workflow_state_name || 'Unknown',
+        state: this.getStateName(story.workflow_state_id),
         workflow_state_id: story.workflow_state_id,
         project_id: story.project_id,
         epic_id: story.epic_id,
