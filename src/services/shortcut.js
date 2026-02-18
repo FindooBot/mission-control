@@ -89,56 +89,95 @@ class ShortcutService {
 
       let allStories = [];
 
-      // Approach 1: Get all stories from a workflow state
+      // Approach 1: Get all stories from active workflow states (started, unstarted)
       try {
-        console.log('Fetching stories from workflow...');
+        console.log('Fetching stories from active workflow states...');
         
-        // Get first workflow and its first active state
         const workflowsResponse = await this.client.get('/workflows');
         const workflows = workflowsResponse.data || [];
         
-        if (workflows.length > 0 && workflows[0].states?.length > 0) {
-          const firstState = workflows[0].states[0];
-          console.log(`  Using workflow state: ${firstState.name} (${firstState.id})`);
-          
-          const response = await this.client.post('/stories/search', {
-            workflow_state_id: firstState.id,
-            archived: false,
-            page_size: 100
-          });
-          
-          const stories = response.data?.data || [];
-          console.log(`  Fetched ${stories.length} stories from workflow`);
-          
-          // Log first story's owner_ids for debugging
-          if (stories.length > 0) {
-            console.log(`  Sample story owner_ids: ${JSON.stringify(stories[0].owner_ids)}`);
+        // Find active states (not 'done' type)
+        const activeStates = [];
+        for (const workflow of workflows) {
+          for (const state of workflow.states || []) {
+            if (state.type === 'unstarted' || state.type === 'started') {
+              activeStates.push(state);
+            }
           }
-          
-          allStories = stories;
+        }
+        
+        console.log(`  Found ${activeStates.length} active workflow states`);
+        
+        // Fetch stories from each active state (limit to first 5 to avoid rate limits)
+        for (const state of activeStates.slice(0, 5)) {
+          try {
+            console.log(`  Fetching from: ${state.name} (${state.id})`);
+            const response = await this.client.post('/stories/search', {
+              workflow_state_id: state.id,
+              archived: false,
+              page_size: 50
+            });
+            
+            const stories = response.data?.data || [];
+            console.log(`    → ${stories.length} stories`);
+            allStories.push(...stories);
+          } catch (e) {
+            console.log(`    → Failed: ${e.message}`);
+          }
+        }
+        
+        // Remove duplicates
+        const seen = new Set();
+        allStories = allStories.filter(s => {
+          if (seen.has(s.id)) return false;
+          seen.add(s.id);
+          return true;
+        });
+        
+        console.log(`  Total unique stories: ${allStories.length}`);
+        
+        // Log first story's owner_ids for debugging
+        if (allStories.length > 0) {
+          console.log(`  Sample story owner_ids: ${JSON.stringify(allStories[0].owner_ids)}`);
         }
       } catch (err1) {
         console.log('Workflow stories failed:', err1.message);
       }
 
-      // Approach 2: Get stories from first epic
+      // Approach 2: Get stories from multiple epics
       if (allStories.length === 0) {
         try {
           console.log('Fetching stories from epics...');
           const epicsResponse = await this.client.get('/epics');
           const epics = epicsResponse.data || [];
+          console.log(`  Found ${epics.length} epics`);
           
-          if (epics.length > 0) {
-            console.log(`  Fetching from epic: ${epics[0].name}`);
-            const response = await this.client.get(`/epics/${epics[0].id}/stories`);
-            const stories = response.data || [];
-            console.log(`  Fetched ${stories.length} stories from epic`);
-            
-            if (stories.length > 0) {
-              console.log(`  Sample story owner_ids: ${JSON.stringify(stories[0].owner_ids)}`);
+          // Try first 5 epics
+          for (const epic of epics.slice(0, 5)) {
+            try {
+              const response = await this.client.get(`/epics/${epic.id}/stories`);
+              const stories = response.data || [];
+              if (stories.length > 0) {
+                console.log(`  ${epic.name}: ${stories.length} stories`);
+                allStories.push(...stories);
+              }
+            } catch (e) {
+              // Ignore errors for individual epics
             }
-            
-            allStories = stories;
+          }
+          
+          // Remove duplicates
+          const seen = new Set();
+          allStories = allStories.filter(s => {
+            if (seen.has(s.id)) return false;
+            seen.add(s.id);
+            return true;
+          });
+          
+          console.log(`  Total unique stories from epics: ${allStories.length}`);
+          
+          if (allStories.length > 0) {
+            console.log(`  Sample story owner_ids: ${JSON.stringify(allStories[0].owner_ids)}`);
           }
         } catch (err2) {
           console.log('Epic stories failed:', err2.message);
