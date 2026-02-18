@@ -52,30 +52,16 @@
   </header>
 
   <main class="dashboard-grid">
-    <!-- Calendar Widget (Left Column, Top) -->
-    <div class="widget widget-calendar" data-widget="calendar">
+    <!-- GitHub Widget (Left Column, Top) -->
+    <div class="widget widget-github" data-widget="github">
       <div class="widget-header">
-        <h2>📅 Calendar</h2>
-        <span class="widget-count" id="calendarCount">0 events</span>
+        <h2>🐙 GitHub</h2>
+        <span class="widget-count" id="githubCount">0 PRs</span>
       </div>
-      <div class="widget-content" id="calendarContent">
+      <div class="widget-content" id="githubContent">
         <div class="widget-loading">
           <div class="spinner"></div>
-          <span>Loading events...</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Todoist Widget (Left Column, Bottom) -->
-    <div class="widget widget-todoist" data-widget="todoist">
-      <div class="widget-header">
-        <h2>✅ Todoist</h2>
-        <span class="widget-count" id="todoistCount">0 tasks</span>
-      </div>
-      <div class="widget-content" id="todoistContent">
-        <div class="widget-loading">
-          <div class="spinner"></div>
-          <span>Loading tasks...</span>
+          <span>Loading PRs...</span>
         </div>
       </div>
     </div>
@@ -94,16 +80,30 @@
       </div>
     </div>
 
-    <!-- GitHub Widget (Right Column, Bottom) -->
-    <div class="widget widget-github" data-widget="github">
+    <!-- Todoist Widget (Left Column, Bottom) -->
+    <div class="widget widget-todoist" data-widget="todoist">
       <div class="widget-header">
-        <h2>🐙 GitHub</h2>
-        <span class="widget-count" id="githubCount">0 PRs</span>
+        <h2>✅ Todoist</h2>
+        <span class="widget-count" id="todoistCount">0 tasks</span>
       </div>
-      <div class="widget-content" id="githubContent">
+      <div class="widget-content" id="todoistContent">
         <div class="widget-loading">
           <div class="spinner"></div>
-          <span>Loading PRs...</span>
+          <span>Loading tasks...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendar Widget (Right Column, Bottom) -->
+    <div class="widget widget-calendar" data-widget="calendar">
+      <div class="widget-header">
+        <h2>📅 Calendar</h2>
+        <span class="widget-count" id="calendarCount">0 events</span>
+      </div>
+      <div class="widget-content" id="calendarContent">
+        <div class="widget-loading">
+          <div class="spinner"></div>
+          <span>Loading events...</span>
         </div>
       </div>
     </div>

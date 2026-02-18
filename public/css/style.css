@@ -453,12 +453,12 @@ input::placeholder {
   width: 100%;
 }
 
-/* Left column: Calendar, Todoist */
-/* Right column: Shortcut, GitHub */
-.widget-calendar { grid-column: 1; grid-row: 1; }
-.widget-todoist { grid-column: 1; grid-row: 2; }
+/* Top row: GitHub, Shortcut */
+/* Bottom row: Todoist, Calendar */
+.widget-github { grid-column: 1; grid-row: 1; }
 .widget-shortcut { grid-column: 2; grid-row: 1; }
-.widget-github { grid-column: 2; grid-row: 2; }
+.widget-todoist { grid-column: 1; grid-row: 2; }
+.widget-calendar { grid-column: 2; grid-row: 2; }
 
 /* ========== WIDGETS ========== */
 
@@ -944,12 +944,49 @@ input::placeholder {
   line-height: 1.4;
 }
 
+.btn-claude-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: var(--accent-purple);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  margin-left: auto;
+}
+
+.btn-claude-icon:hover {
+  background: #8B5CF6;
+  transform: scale(1.05);
+}
+
+.btn-claude-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Update story-header to accommodate the button */
+.story-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
 .pr-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.pr-footer .btn-claude-icon {
+  margin-left: 0;
 }
 
 .pr-author {

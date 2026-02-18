@@ -12,16 +12,16 @@ const REFRESH_INTERVAL = 60000; // 60 seconds
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
   console.log('🚀 Mission Control Dashboard loaded');
-  
+
   // Initialize theme
   initTheme();
-  
+
   // Load initial data from server-rendered JSON
   loadInitialData();
-  
+
   // Initialize dashboard
   initDashboard();
-  
+
   // Set up event listeners
   setupEventListeners();
 });
@@ -33,11 +33,11 @@ function initTheme() {
   const themeToggle = document.getElementById('themeToggle');
   const sunIcon = themeToggle.querySelector('.sun-icon');
   const moonIcon = themeToggle.querySelector('.moon-icon');
-  
+
   // Check for saved preference or system preference
   const savedTheme = localStorage.getItem('theme');
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  
+
   if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
     setTheme('dark');
     sunIcon.style.display = 'none';
@@ -47,14 +47,14 @@ function initTheme() {
     sunIcon.style.display = 'block';
     moonIcon.style.display = 'none';
   }
-  
+
   themeToggle.addEventListener('click', () => {
     const currentTheme = document.documentElement.getAttribute('data-theme');
     const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    
+
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
-    
+
     if (newTheme === 'dark') {
       sunIcon.style.display = 'none';
       moonIcon.style.display = 'block';
@@ -98,13 +98,13 @@ function loadInitialData() {
 function initDashboard() {
   // Render widgets with initial data
   renderAllWidgets();
-  
+
   // Update last updated timestamp
   updateLastUpdated();
-  
+
   // Set up auto-refresh
   startAutoRefresh();
-  
+
   // Load config status
   loadConfigStatus();
 }
@@ -454,11 +454,11 @@ function startAutoRefresh() {
   if (autoRefreshInterval) {
     clearInterval(autoRefreshInterval);
   }
-  
+
   autoRefreshInterval = setInterval(() => {
     refreshData();
   }, REFRESH_INTERVAL);
-  
+
   console.log(`Auto-refresh enabled (${REFRESH_INTERVAL / 1000}s interval)`);
 }
 
@@ -478,11 +478,11 @@ async function refreshData() {
   try {
     const response = await fetch('/api/data');
     const result = await response.json();
-    
+
     if (result.success) {
       dashboardData = result.data;
       lastUpdated = result.lastUpdated;
-      
+
       renderAllWidgets();
       updateLastUpdated();
     } else {
@@ -510,7 +510,7 @@ function updateLastUpdated() {
  */
 function renderAllWidgets() {
   if (!dashboardData) return;
-  
+
   renderCalendarWidget();
   renderTodoistWidget();
   renderShortcutWidget();
@@ -525,13 +525,13 @@ function renderCalendarWidget() {
   const container = document.getElementById('calendarContent');
   const countElement = document.getElementById('calendarCount');
   const events = dashboardData.calendar || [];
-  
+
   // Update count
   countElement.textContent = `${events.length} event${events.length !== 1 ? 's' : ''}`;
   if (events.length > 0) {
     countElement.classList.add('has-items');
   }
-  
+
   if (events.length === 0) {
     container.innerHTML = `
       <div class="empty-state">
@@ -542,18 +542,18 @@ function renderCalendarWidget() {
     `;
     return;
   }
-  
+
   // Sort events by start time
-  const sortedEvents = [...events].sort((a, b) => 
+  const sortedEvents = [...events].sort((a, b) =>
     new Date(a.start_time) - new Date(b.start_time)
   );
-  
+
   const html = sortedEvents.map(event => {
     const startTime = formatTime(event.start_time);
     const endTime = event.end_time ? formatTime(event.end_time) : null;
     const duration = event.end_time ? formatDuration(event.start_time, event.end_time) : 'All day';
     const calendarClass = event.calendar_type === 'work' ? 'work' : '';
-    
+
     return `
       <div class="calendar-event" onclick="openLink('${event.uid || ''}')">
         <div class="event-time">
@@ -569,7 +569,7 @@ function renderCalendarWidget() {
       </div>
     `;
   }).join('');
-  
+
   container.innerHTML = `<ul class="calendar-list">${html}</ul>`;
 }
 
@@ -580,14 +580,14 @@ function renderTodoistWidget() {
   const container = document.getElementById('todoistContent');
   const countElement = document.getElementById('todoistCount');
   const tasks = dashboardData.todoistTasks || [];
-  
+
   // Update count
   const activeCount = tasks.filter(t => !t.is_completed).length;
   countElement.textContent = `${activeCount} task${activeCount !== 1 ? 's' : ''}`;
   if (activeCount > 0) {
     countElement.classList.add('has-items');
   }
-  
+
   if (tasks.length === 0) {
     container.innerHTML = `
       <div class="empty-state">
@@ -598,14 +598,14 @@ function renderTodoistWidget() {
     `;
     return;
   }
-  
+
   // Add "New Task" button at top
   let html = `
     <div class="todoist-add-task">
       <button class="btn btn-primary btn-sm" onclick="showAddTaskModal()">+ Add Task</button>
     </div>
   `;
-  
+
   // Sort tasks: today first, then by priority
   const sortedTasks = [...tasks].sort((a, b) => {
     const aDueToday = isDueToday(a);
@@ -614,12 +614,12 @@ function renderTodoistWidget() {
     if (!aDueToday && bDueToday) return 1;
     return (b.priority || 1) - (a.priority || 1);
   });
-  
+
   html += sortedTasks.slice(0, 10).map(task => {
     const completed = task.is_completed ? 'completed' : '';
     const dueClass = getDueClass(task);
     const dueText = getDueText(task);
-    
+
     return `
       <div class="todoist-task ${completed}" onclick="toggleTask('${task.task_id}', ${task.is_completed})" data-task-id="${task.task_id}">
         <div class="task-checkbox"></div>
@@ -633,7 +633,7 @@ function renderTodoistWidget() {
       </div>
     `;
   }).join('');
-  
+
   container.innerHTML = `<div class="todoist-list">${html}</div>`;
 }
 
@@ -645,7 +645,7 @@ function renderShortcutWidget() {
   const countElement = document.getElementById('shortcutCount');
   const stories = dashboardData.shortcutStories || [];
   const notifications = dashboardData.shortcutNotifications || [];
-  
+
   // Update count with notification badge
   countElement.textContent = `${stories.length} stor${stories.length !== 1 ? 'ies' : 'y'}`;
   if (stories.length > 0) {
@@ -655,7 +655,7 @@ function renderShortcutWidget() {
     countElement.classList.add('has-notifications');
     countElement.textContent = `${stories.length} (${notifications.length})`;
   }
-  
+
   if (stories.length === 0) {
     container.innerHTML = `
       <div class="empty-state">
@@ -666,7 +666,7 @@ function renderShortcutWidget() {
     `;
     return;
   }
-  
+
   // Sort by deadline (urgent first), then updated
   const sortedStories = [...stories].sort((a, b) => {
     if (a.deadline && !b.deadline) return -1;
@@ -676,19 +676,25 @@ function renderShortcutWidget() {
     }
     return new Date(b.updated_at) - new Date(a.updated_at);
   });
-  
+
   const html = sortedStories.slice(0, 10).map(story => {
     const deadlineClass = isUrgent(story.deadline) ? 'urgent' : '';
     const deadlineText = story.deadline ? `Due ${formatDate(story.deadline)}` : '';
     const storyUrl = story.url || `https://app.shortcut.com/story/${story.story_id}`;
-    
+
     return `
-      <div class="shortcut-story" onclick="openLink('${storyUrl}')">
+      <div class="shortcut-story">
         <div class="story-header">
           <span class="story-id">#${story.story_id}</span>
           <span class="story-type ${story.story_type}">${story.story_type || 'story'}</span>
+          <button class="btn-claude-icon" onclick="investigateStoryWithClaude(event, '${story.story_id}', '${escapeHtml(story.name)}')" title="Investigate with Claude">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 6v6l4 2"/>
+            </svg>
+          </button>
         </div>
-        <div class="story-name">${escapeHtml(story.name)}</div>
+        <div class="story-name" onclick="openLink('${storyUrl}')">${escapeHtml(story.name)}</div>
         <div class="story-meta">
           <span class="story-state">${escapeHtml(story.state || 'In Progress')}</span>
           ${deadlineText ? `<span class="story-deadline ${deadlineClass}">⏰ ${deadlineText}</span>` : ''}
@@ -696,7 +702,7 @@ function renderShortcutWidget() {
       </div>
     `;
   }).join('');
-  
+
   container.innerHTML = `<ul class="shortcut-list">${html}</ul>`;
 }
 
@@ -708,7 +714,7 @@ function renderGitHubWidget() {
   const countElement = document.getElementById('githubCount');
   const prs = dashboardData.githubPRs || [];
   const notifications = dashboardData.githubNotifications || [];
-  
+
   // Update count with notification badge
   countElement.textContent = `${prs.length} PR${prs.length !== 1 ? 's' : ''}`;
   if (prs.length > 0) {
@@ -718,7 +724,7 @@ function renderGitHubWidget() {
     countElement.classList.add('has-notifications');
     countElement.textContent = `${prs.length} (${notifications.length})`;
   }
-  
+
   if (prs.length === 0) {
     container.innerHTML = `
       <div class="empty-state">
@@ -729,15 +735,15 @@ function renderGitHubWidget() {
     `;
     return;
   }
-  
+
   // Sort by updated date
-  const sortedPRs = [...prs].sort((a, b) => 
+  const sortedPRs = [...prs].sort((a, b) =>
     new Date(b.updated_at) - new Date(a.updated_at)
   );
-  
+
   const html = sortedPRs.slice(0, 10).map(pr => {
     const draftBadge = pr.draft ? '<span class="pr-draft-badge">Draft</span>' : '';
-    
+
     // Review status badges
     let reviewBadges = '';
     if (pr.has_approval) {
@@ -752,9 +758,9 @@ function renderGitHubWidget() {
     if (pr.review_count === 0 && !pr.draft) {
       reviewBadges += '<span class="pr-badge pr-pending">⏳ Pending Review</span>';
     }
-    
+
     const timeAgoText = timeAgo(pr.updated_at);
-    
+
     return `
       <div class="github-pr">
         <div class="pr-header">
@@ -770,12 +776,17 @@ function renderGitHubWidget() {
             <span>${escapeHtml(pr.author_login)}</span>
           </div>
           <span class="pr-time">${timeAgoText}</span>
-          <button class="btn btn-review" onclick="copyReviewPrompt(event, '${pr.html_url}', '${escapeHtml(pr.title)}')">Review with Claude</button>
+          <button class="btn-claude-icon" onclick="copyReviewPrompt(event, '${pr.html_url}', '${escapeHtml(pr.title)}')" title="Review with Claude">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 6v6l4 2"/>
+            </svg>
+          </button>
         </div>
       </div>
     `;
   }).join('');
-  
+
   container.innerHTML = `<ul class="github-list">${html}</ul>`;
 }
 
@@ -784,7 +795,7 @@ function renderGitHubWidget() {
  */
 function copyReviewPrompt(event, prUrl, prTitle) {
   event.stopPropagation();
-  
+
   const prompt = `Review this PR: ${prUrl}
 
 Please analyze:
@@ -804,20 +815,44 @@ Fetch the PR diff and any related context using your GitHub MCP tools, then prov
 }
 
 /**
+ * Investigate Shortcut story with Claude
+ */
+function investigateStoryWithClaude(event, storyId, storyName) {
+  event.stopPropagation();
+
+  const prompt = `Investigate this Shortcut story: #${storyId} - ${storyName}
+
+Please:
+1. Open the story in Shortcut to understand the requirements
+2. Check if there's a related branch or PR in the ~/git/web repository
+3. Look at the code changes if available
+4. Provide a summary of what needs to be done and any technical considerations
+
+Story URL: https://app.shortcut.com/story/${storyId}`;
+
+  navigator.clipboard.writeText(prompt).then(() => {
+    showToast('Investigation prompt copied! Paste into Claude Desktop.', 'success');
+  }).catch(err => {
+    console.error('Failed to copy:', err);
+    showToast('Failed to copy prompt', 'error');
+  });
+}
+
+/**
  * Show toast notification
  */
 function showToast(message, type = 'info') {
   const container = document.getElementById('toastContainer');
-  
+
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   toast.innerHTML = `
     <span class="toast-message">${message}</span>
     <button class="toast-close" onclick="this.parentElement.remove()">×</button>
   `;
-  
+
   container.appendChild(toast);
-  
+
   // Auto-remove after 5 seconds
   setTimeout(() => {
     toast.classList.add('hiding');
@@ -905,9 +940,9 @@ async function loadConfigStatus() {
   try {
     const response = await fetch('/api/config');
     const config = await response.json();
-    
+
     console.log('Config loaded:', config);
-    
+
     // Show warnings for unconfigured services
     if (!config.shortcut.hasToken) {
       console.log('⚠️ Shortcut not configured');
@@ -918,7 +953,7 @@ async function loadConfigStatus() {
     if (!config.todoist.hasToken) {
       console.log('⚠️ Todoist not configured');
     }
-    
+
   } catch (error) {
     console.error('Failed to load config:', error);
   }
@@ -1057,14 +1092,14 @@ function formatTime(dateString) {
  */
 function formatDuration(startTime, endTime) {
   if (!endTime) return 'All day';
-  
+
   const start = new Date(startTime);
   const end = new Date(endTime);
   const diffMs = end - start;
-  
+
   const hours = Math.floor(diffMs / (1000 * 60 * 60));
   const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-  
+
   if (hours === 0) return `${minutes}m`;
   if (minutes === 0) return `${hours}h`;
   return `${hours}h ${minutes}m`;
@@ -1075,11 +1110,11 @@ function formatDuration(startTime, endTime) {
  */
 function timeAgo(dateString) {
   if (!dateString) return '';
-  
+
   const date = new Date(dateString);
   const now = new Date();
   const seconds = Math.floor((now - date) / 1000);
-  
+
   if (seconds < 60) return 'just now';
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes}m ago`;
