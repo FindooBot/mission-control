@@ -14,8 +14,8 @@ RUN npm ci --only=production && npm rebuild better-sqlite3
 # Copy application code
 COPY . .
 
-# Create data directory
-RUN mkdir -p /app/data
+# Create data and config directories
+RUN mkdir -p /app/data /app/config
 
 # Expose port
 EXPOSE 1337

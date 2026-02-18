@@ -9,8 +9,8 @@ services:
     volumes:
       # Persistent SQLite database
       - ./data:/app/data
-      # Configuration file
-      - ./config.json:/app/config.json
+      # Configuration directory
+      - ./config:/app/config
       # GitHub CLI authentication from host (for private repos)
       - ~/.config/gh:/root/.config/gh:ro
       # Docker socket (if gh CLI needs it)

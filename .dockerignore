@@ -8,6 +8,7 @@ README.md
 coverage
 .DS_Store
 data
+config
 config.json
 *.md
 !README.md

@@ -6,7 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const CONFIG_PATH = path.join(__dirname, '../../config.json');
+const CONFIG_PATH = path.join(__dirname, '../../config/config.json');
 
 // Default configuration
 const defaultConfig = {
