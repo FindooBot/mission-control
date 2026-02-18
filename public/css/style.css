@@ -382,9 +382,10 @@ input::placeholder {
 /* ========== DASHBOARD ========== */
 
 .dashboard-page {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .dashboard-header {
@@ -449,14 +450,15 @@ input::placeholder {
 /* Dashboard Grid Layout */
 .dashboard-grid {
   flex: 1;
-  padding: 32px;
+  padding: 24px 32px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
-  gap: 24px;
+  gap: 20px;
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
+  min-height: 0; /* Prevent grid from expanding */
 }
 
 /* Top row: GitHub, Shortcut */
@@ -476,6 +478,8 @@ input::placeholder {
   transition: var(--transition);
   display: flex;
   flex-direction: column;
+  min-height: 0; /* Prevent flex item from expanding */
+  max-height: 100%; /* Constrain to grid cell */
 }
 
 .widget:hover {
@@ -522,6 +526,7 @@ input::placeholder {
   padding: 0;
   flex: 1;
   overflow-y: auto;
+  min-height: 0; /* Critical: allows flex child to shrink */
 }
 
 /* Loading State */
