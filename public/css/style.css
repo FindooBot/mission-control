@@ -452,7 +452,7 @@ input::placeholder {
   padding: 32px;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto auto;
+  grid-template-rows: 1fr 1fr;
   gap: 24px;
   max-width: 1400px;
   margin: 0 auto;
