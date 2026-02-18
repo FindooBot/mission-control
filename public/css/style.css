@@ -1529,14 +1529,32 @@ input::placeholder {
 
 /* ========== TODOIST ADD TASK BUTTON ========== */
 .todoist-add-task {
-  padding: 12px 24px;
+  padding: 8px 16px;
   border-top: 1px solid var(--border-color);
-  text-align: center;
+  display: flex;
+  justify-content: flex-end;
 }
 
-.todoist-add-task .btn {
-  font-size: 12px;
-  padding: 6px 12px;
+.btn-add-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent-blue);
+  color: white;
+  font-size: 18px;
+  font-weight: 300;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.btn-add-icon:hover {
+  background: #0056CC;
+  transform: scale(1.1);
 }
 
 /* ========== MODAL ========== */

@@ -630,7 +630,7 @@ function renderTodoistWidget() {
   // Add "New Task" button at bottom
   html += `
     <div class="todoist-add-task">
-      <button class="btn btn-primary btn-xs" onclick="showAddTaskModal()">+ Add Task</button>
+      <button class="btn-add-icon" onclick="showAddTaskModal()" title="Add Task">+</button>
     </div>
   `;
 
@@ -689,8 +689,12 @@ function renderShortcutWidget() {
           <span class="story-type ${story.story_type}">${story.story_type || 'story'}</span>
           <button class="btn-claude-icon" onclick="investigateStoryWithClaude(event, '${story.story_id}', '${escapeHtml(story.name)}')" title="Investigate with Claude">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-              <circle cx="12" cy="12" r="10"/>
-              <path d="M12 6v6l4 2"/>
+              <rect x="3" y="4" width="18" height="12" rx="2" ry="2"></rect>
+              <line x1="8" y1="2" x2="8" y2="4"></line>
+              <line x1="16" y1="2" x2="16" y2="4"></line>
+              <line x1="9" y1="10" x2="9.01" y2="10"></line>
+              <line x1="15" y1="10" x2="15.01" y2="10"></line>
+              <path d="M9 16v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-2"></path>
             </svg>
           </button>
         </div>
@@ -778,8 +782,12 @@ function renderGitHubWidget() {
           <span class="pr-time">${timeAgoText}</span>
           <button class="btn-claude-icon" onclick="copyReviewPrompt(event, '${pr.html_url}', '${escapeHtml(pr.title)}')" title="Review with Claude">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-              <circle cx="12" cy="12" r="10"/>
-              <path d="M12 6v6l4 2"/>
+              <rect x="3" y="4" width="18" height="12" rx="2" ry="2"></rect>
+              <line x1="8" y1="2" x2="8" y2="4"></line>
+              <line x1="16" y1="2" x2="16" y2="4"></line>
+              <line x1="9" y1="10" x2="9.01" y2="10"></line>
+              <line x1="15" y1="10" x2="15.01" y2="10"></line>
+              <path d="M9 16v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-2"></path>
             </svg>
           </button>
         </div>
