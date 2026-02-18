@@ -6,6 +6,8 @@
 const express = require('express');
 const DatabaseManager = require('../database/database');
 const configManager = require('../config/manager');
+const GitHubService = require('../services/github');
+const ShortcutService = require('../services/shortcut');
 
 /**
  * Create dashboard router with scheduler instance
@@ -176,6 +178,100 @@ function createDashboardRouter(scheduler) {
       res.redirect('/settings?success=true');
     } catch (error) {
       res.redirect(`/settings?error=${encodeURIComponent(error.message)}`);
+    }
+  });
+
+  /**
+   * POST /api/notifications/github/:id/read - Mark GitHub notification as read
+   */
+  router.post('/api/notifications/github/:id/read', async (req, res) => {
+    try {
+      const config = configManager.getConfig();
+      if (!config.github?.personalAccessToken) {
+        return res.status(400).json({ success: false, error: 'GitHub not configured' });
+      }
+
+      const github = new GitHubService(config.github);
+      const result = await github.markNotificationRead(req.params.id);
+
+      if (result) {
+        res.json({ success: true });
+      } else {
+        res.status(500).json({ success: false, error: 'Failed to mark as read' });
+      }
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * POST /api/notifications/github/read-all - Mark all GitHub notifications as read
+   */
+  router.post('/api/notifications/github/read-all', async (req, res) => {
+    try {
+      const config = configManager.getConfig();
+      if (!config.github?.personalAccessToken) {
+        return res.status(400).json({ success: false, error: 'GitHub not configured' });
+      }
+
+      // Mark all as read via API
+      const github = new GitHubService(config.github);
+
+      // Get current notifications and mark each as read
+      const notifications = await github.getNotifications();
+      for (const notif of notifications) {
+        await github.markNotificationRead(notif.thread_id);
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * POST /api/notifications/shortcut/:id/read - Mark Shortcut notification as read
+   */
+  router.post('/api/notifications/shortcut/:id/read', async (req, res) => {
+    try {
+      const config = configManager.getConfig();
+      if (!config.shortcut?.apiToken) {
+        return res.status(400).json({ success: false, error: 'Shortcut not configured' });
+      }
+
+      const shortcut = new ShortcutService(config.shortcut.apiToken);
+      const result = await shortcut.markNotificationRead(req.params.id);
+
+      if (result) {
+        res.json({ success: true });
+      } else {
+        res.status(500).json({ success: false, error: 'Failed to mark as read' });
+      }
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * POST /api/notifications/shortcut/read-all - Mark all Shortcut notifications as read
+   */
+  router.post('/api/notifications/shortcut/read-all', async (req, res) => {
+    try {
+      const config = configManager.getConfig();
+      if (!config.shortcut?.apiToken) {
+        return res.status(400).json({ success: false, error: 'Shortcut not configured' });
+      }
+
+      const shortcut = new ShortcutService(config.shortcut.apiToken);
+      const result = await shortcut.markAllNotificationsRead();
+
+      if (result) {
+        res.json({ success: true });
+      } else {
+        res.status(500).json({ success: false, error: 'Failed to mark all as read' });
+      }
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
     }
   });
 

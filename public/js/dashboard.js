@@ -121,6 +121,330 @@ function setupEventListeners() {
       manualRefresh();
     });
   }
+
+  // Notification panel
+  initNotificationPanel();
+}
+
+/**
+ * Initialize notification panel
+ */
+function initNotificationPanel() {
+  const notificationBtn = document.getElementById('notificationBtn');
+  const notificationPanel = document.getElementById('notificationPanel');
+  const notificationPanelClose = document.getElementById('notificationPanelClose');
+  const panelOverlay = document.getElementById('panelOverlay');
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const markAllReadBtn = document.getElementById('markAllRead');
+
+  // Open panel
+  notificationBtn?.addEventListener('click', () => {
+    notificationPanel.classList.add('open');
+    panelOverlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    renderNotificationPanel();
+  });
+
+  // Close panel
+  const closePanel = () => {
+    notificationPanel.classList.remove('open');
+    panelOverlay.classList.remove('open');
+    document.body.style.overflow = '';
+  };
+
+  notificationPanelClose?.addEventListener('click', closePanel);
+  panelOverlay?.addEventListener('click', closePanel);
+
+  // Tab switching
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+
+      // Update tab buttons
+      tabBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      // Update tab content
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      document.getElementById(`${tab}Notifications`)?.classList.add('active');
+    });
+  });
+
+  // Mark all as read
+  markAllReadBtn?.addEventListener('click', async () => {
+    const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab;
+    if (activeTab === 'github') {
+      await markAllGitHubNotificationsRead();
+    } else if (activeTab === 'shortcut') {
+      await markAllShortcutNotificationsRead();
+    }
+  });
+}
+
+/**
+ * Render notification panel content
+ */
+function renderNotificationPanel() {
+  const githubNotifs = dashboardData.githubNotifications || [];
+  const shortcutNotifs = dashboardData.shortcutNotifications || [];
+
+  // Update header count
+  const totalCount = githubNotifs.length + shortcutNotifs.length;
+  const headerCount = document.getElementById('headerNotificationCount');
+  if (headerCount) {
+    headerCount.textContent = totalCount;
+    headerCount.style.display = totalCount > 0 ? 'flex' : 'none';
+  }
+
+  // Update tab counts
+  const githubCount = document.getElementById('githubNotifCount');
+  const shortcutCount = document.getElementById('shortcutNotifCount');
+  if (githubCount) githubCount.textContent = `(${githubNotifs.length})`;
+  if (shortcutCount) shortcutCount.textContent = `(${shortcutNotifs.length})`;
+
+  // Render GitHub notifications
+  renderGitHubNotifications(githubNotifs);
+
+  // Render Shortcut notifications
+  renderShortcutNotifications(shortcutNotifs);
+}
+
+/**
+ * Render GitHub notifications in panel
+ */
+function renderGitHubNotifications(notifications) {
+  const container = document.getElementById('githubNotifications');
+
+  if (notifications.length === 0) {
+    container.innerHTML = `
+      <div class="notification-empty">
+        <div class="notification-empty-icon">🐙</div>
+        <p>No unread notifications</p>
+        <span>You're all caught up!</span>
+      </div>
+    `;
+    return;
+  }
+
+  const html = notifications.map(notif => {
+    const icon = getNotificationIcon(notif.subject_type);
+    const timeAgoText = timeAgo(notif.updated_at);
+
+    return `
+      <div class="notification-item" data-id="${notif.notification_id}"
+           onclick="openNotification('${notif.subject_url}', '${notif.notification_id}', 'github')">
+        <div class="notification-icon">${icon}</div>
+        <div class="notification-content">
+          <div class="notification-title">${escapeHtml(notif.subject_title)}</div>
+          <div class="notification-meta">
+            <span class="notification-repo">${escapeHtml(notif.repository_owner)}/${escapeHtml(notif.repository_name)}</span>
+            <span class="notification-reason">${formatReason(notif.reason)}</span>
+            <span class="notification-time">${timeAgoText}</span>
+          </div>
+        </div>
+        <button class="notification-dismiss" onclick="dismissNotification(event, '${notif.notification_id}', 'github')"
+                title="Mark as read">
+          ×
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = html;
+}
+
+/**
+ * Render Shortcut notifications in panel
+ */
+function renderShortcutNotifications(notifications) {
+  const container = document.getElementById('shortcutNotifications');
+
+  if (notifications.length === 0) {
+    container.innerHTML = `
+      <div class="notification-empty">
+        <div class="notification-empty-icon">🚀</div>
+        <p>No unread notifications</p>
+        <span>You're all caught up!</span>
+      </div>
+    `;
+    return;
+  }
+
+  const html = notifications.map(notif => {
+    const timeAgoText = timeAgo(notif.notified_at);
+    const typeIcon = notif.type === 'mention' ? '@' : '🔔';
+
+    return `
+      <div class="notification-item" data-id="${notif.notification_id}"
+           onclick="openShortcutNotification('${notif.story_id}', '${notif.notification_id}')">
+        <div class="notification-icon">${typeIcon}</div>
+        <div class="notification-content">
+          <div class="notification-message">${escapeHtml(notif.message || 'Notification')}</div>
+          <div class="notification-meta">
+            <span class="notification-actor">${escapeHtml(notif.actor_name)}</span>
+            <span class="notification-type">${notif.type}</span>
+            <span class="notification-time">${timeAgoText}</span>
+          </div>
+        </div>
+        <button class="notification-dismiss" onclick="dismissNotification(event, '${notif.notification_id}', 'shortcut')"
+                title="Mark as read">
+          ×
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = html;
+}
+
+/**
+ * Get icon for notification type
+ */
+function getNotificationIcon(type) {
+  const icons = {
+    'PullRequest': '🔀',
+    'Issue': '🐛',
+    'Commit': '💾',
+    'Release': '🚀',
+    'Discussion': '💬'
+  };
+  return icons[type] || '📌';
+}
+
+/**
+ * Format notification reason
+ */
+function formatReason(reason) {
+  const reasons = {
+    'assign': '👤 Assigned',
+    'author': '✍️ Author',
+    'comment': '💬 Comment',
+    'invitation': '📩 Invite',
+    'manual': '📌 Manual',
+    'mention': '@ Mention',
+    'review_requested': '👀 Review',
+    'state_change': '🔄 State',
+    'subscribed': '🔔 Subscribed',
+    'team_mention': '@ Team'
+  };
+  return reasons[reason] || reason;
+}
+
+/**
+ * Open notification and mark as read
+ */
+async function openNotification(url, notificationId, type) {
+  // Extract PR/issue URL from API URL
+  let webUrl = url;
+  if (url && url.includes('/repos/')) {
+    webUrl = url.replace('api.github.com/repos/', 'github.com/')
+                .replace('/pulls/', '/pull/')
+                .replace('/issues/', '/issues/');
+  }
+
+  if (webUrl) {
+    window.open(webUrl, '_blank');
+  }
+
+  // Mark as read
+  await dismissNotification(null, notificationId, type);
+}
+
+/**
+ * Open Shortcut notification
+ */
+async function openShortcutNotification(storyId, notificationId) {
+  if (storyId) {
+    window.open(`https://app.shortcut.com/story/${storyId}`, '_blank');
+  }
+
+  await dismissNotification(null, notificationId, 'shortcut');
+}
+
+/**
+ * Dismiss/mark as read a notification
+ */
+async function dismissNotification(event, notificationId, type) {
+  if (event) {
+    event.stopPropagation();
+  }
+
+  try {
+    const response = await fetch(`/api/notifications/${type}/${notificationId}/read`, {
+      method: 'POST'
+    });
+
+    if (response.ok) {
+      // Remove from UI
+      const item = document.querySelector(`.notification-item[data-id="${notificationId}"]`);
+      if (item) {
+        item.style.opacity = '0';
+        item.style.transform = 'translateX(20px)';
+        setTimeout(() => item.remove(), 200);
+      }
+
+      // Update counts and re-render
+      if (type === 'github') {
+        dashboardData.githubNotifications = dashboardData.githubNotifications.filter(
+          n => n.notification_id !== notificationId
+        );
+      } else {
+        dashboardData.shortcutNotifications = dashboardData.shortcutNotifications.filter(
+          n => n.notification_id !== notificationId
+        );
+      }
+
+      renderNotificationPanel();
+      renderShortcutWidget();
+      renderGitHubWidget();
+    }
+  } catch (error) {
+    console.error('Failed to dismiss notification:', error);
+  }
+}
+
+/**
+ * Mark all GitHub notifications as read
+ */
+async function markAllGitHubNotificationsRead() {
+  try {
+    const response = await fetch('/api/notifications/github/read-all', {
+      method: 'POST'
+    });
+
+    if (response.ok) {
+      dashboardData.githubNotifications = [];
+      renderNotificationPanel();
+      renderGitHubWidget();
+      showToast('All GitHub notifications marked as read', 'success');
+    }
+  } catch (error) {
+    console.error('Failed to mark all notifications as read:', error);
+    showToast('Failed to mark notifications as read', 'error');
+  }
+}
+
+/**
+ * Mark all Shortcut notifications as read
+ */
+async function markAllShortcutNotificationsRead() {
+  try {
+    const response = await fetch('/api/notifications/shortcut/read-all', {
+      method: 'POST'
+    });
+
+    if (response.ok) {
+      dashboardData.shortcutNotifications = [];
+      renderNotificationPanel();
+      renderShortcutWidget();
+      showToast('All Shortcut notifications marked as read', 'success');
+    }
+  } catch (error) {
+    console.error('Failed to mark all notifications as read:', error);
+    showToast('Failed to mark notifications as read', 'error');
+  }
 }
 
 /**
@@ -191,6 +515,7 @@ function renderAllWidgets() {
   renderTodoistWidget();
   renderShortcutWidget();
   renderGitHubWidget();
+  renderNotificationPanel();
 }
 
 /**
