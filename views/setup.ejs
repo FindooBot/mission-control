@@ -116,6 +116,18 @@
             </div>
           </div>
 
+          <!-- Figma Section -->
+          <div class="form-section">
+            <h2>🎨 Figma</h2>
+            <div class="form-group">
+              <label for="figmaToken">Personal Access Token</label>
+              <input type="password" id="figmaToken" name="figmaToken" 
+                     value="<%= config.figma?.apiToken || '' %>"
+                     placeholder="figd_xxxxxxxxxxxx">
+              <span class="help-text">Figma Settings → Personal Access Tokens</span>
+            </div>
+          </div>
+
           <div class="form-actions">
             <button type="submit" class="btn btn-primary">
               Save Configuration

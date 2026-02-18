@@ -535,6 +535,17 @@ async function markAllFigmaNotificationsRead() {
     showToast('Failed to mark notifications as read', 'error');
   }
 }
+
+/**
+ * Mark all Shortcut notifications as read
+ */
+async function markAllShortcutNotificationsRead() {
+  try {
+    const response = await fetch('/api/notifications/shortcut/read-all', {
+      method: 'POST'
+    });
+
+    if (response.ok) {
       dashboardData.shortcutNotifications = [];
       renderNotificationPanel();
       renderShortcutWidget();
