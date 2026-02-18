@@ -20,6 +20,7 @@ class ShortcutService {
     });
     this.userId = null;
     this.user = null;
+    this.userIdsToMatch = []; // Array of possible user ID formats
   }
 
   /**
@@ -28,21 +29,51 @@ class ShortcutService {
   async getCurrentUser() {
     try {
       const response = await this.client.get('/member');
-      this.userId = response.data.id;
       this.user = response.data;
-      console.log(`Shortcut user: ${this.user?.name} (${this.userId})`);
-      console.log(`  Workspace: ${this.user?.workspace2?.name || 'unknown'}`);
+      this.userId = this.user.id;
       
-      // Check for member ID (numeric) which might be used in owner_ids
-      if (this.user?.member_id) {
-        console.log(`  Member ID: ${this.user.member_id}`);
+      // Collect all possible user ID formats
+      this.userIdsToMatch = [this.userId];
+      
+      // Some workspaces use numeric IDs
+      if (this.user.member_id) {
+        this.userIdsToMatch.push(String(this.user.member_id));
+        this.userIdsToMatch.push(Number(this.user.member_id));
       }
       
-      return response.data;
+      // Also try workspace-specific ID
+      if (this.user.workspace2?.id) {
+        this.userIdsToMatch.push(this.user.workspace2.id);
+      }
+      
+      console.log(`Shortcut user: ${this.user?.name}`);
+      console.log(`  User IDs to match: ${JSON.stringify(this.userIdsToMatch)}`);
+      
+      return this.user;
     } catch (error) {
       console.error('Failed to get Shortcut user:', error.message);
       throw error;
     }
+  }
+
+  /**
+   * Check if user is owner of story
+   */
+  isStoryOwner(story) {
+    const owners = story.owner_ids || [];
+    
+    // Check each possible user ID format
+    for (const userId of this.userIdsToMatch) {
+      if (owners.includes(userId)) {
+        return true;
+      }
+      // Also try string comparison
+      if (owners.some(ownerId => String(ownerId) === String(userId))) {
+        return true;
+      }
+    }
+    
+    return false;
   }
 
   /**
@@ -54,115 +85,93 @@ class ShortcutService {
         await this.getCurrentUser();
       }
 
-      console.log(`Fetching Shortcut stories for user ${this.userId}...`);
+      console.log(`Fetching Shortcut stories...`);
 
-      let stories = [];
+      let allStories = [];
 
-      // Approach 1: Try to get iterations/sprints and their stories
+      // Approach 1: Get all stories from a workflow state
       try {
-        console.log('Trying iterations endpoint...');
-        const response = await this.client.get('/iterations');
-        const iterations = response.data || [];
-        console.log(`Found ${iterations.length} iterations`);
-
-        for (const iteration of iterations.slice(0, 3)) {
-          try {
-            const storiesResponse = await this.client.get(`/iterations/${iteration.id}/stories`);
-            const iterationStories = storiesResponse.data || [];
-            const myStories = iterationStories.filter(story => {
-              const owners = story.owner_ids || [];
-              return owners.includes(this.userId);
-            });
-            stories.push(...myStories);
-          } catch (e) {
-            // Ignore
-          }
-        }
-        console.log(`Found ${stories.length} stories from iterations`);
-      } catch (err) {
-        console.log('Iterations failed:', err.message);
-      }
-
-      // Approach 2: Get workflows and filter by workflow state
-      if (stories.length === 0) {
-        try {
-          console.log('Trying workflows...');
-          const workflowsResponse = await this.client.get('/workflows');
-          const workflows = workflowsResponse.data || [];
-          console.log(`Found ${workflows.length} workflows`);
-
-          // Get unstarted and started states
-          const activeStateIds = [];
-          for (const workflow of workflows) {
-            for (const state of workflow.states || []) {
-              if (state.type === 'unstarted' || state.type === 'started') {
-                activeStateIds.push(state.id);
-              }
-            }
-          }
-          console.log(`Found ${activeStateIds.length} active workflow states`);
-
-          // Try to search by workflow state
-          for (const stateId of activeStateIds.slice(0, 3)) {
-            try {
-              const response = await this.client.post('/stories/search', {
-                workflow_state_id: stateId,
-                archived: false
-              });
-              const stateStories = response.data?.data || [];
-              const myStories = stateStories.filter(story => {
-                const owners = story.owner_ids || [];
-                return owners.includes(this.userId);
-              });
-              stories.push(...myStories);
-            } catch (e) {
-              // Ignore
-            }
-          }
+        console.log('Fetching stories from workflow...');
+        
+        // Get first workflow and its first active state
+        const workflowsResponse = await this.client.get('/workflows');
+        const workflows = workflowsResponse.data || [];
+        
+        if (workflows.length > 0 && workflows[0].states?.length > 0) {
+          const firstState = workflows[0].states[0];
+          console.log(`  Using workflow state: ${firstState.name} (${firstState.id})`);
           
-          // Remove duplicates
-          const seen = new Set();
-          stories = stories.filter(s => {
-            if (seen.has(s.id)) return false;
-            seen.add(s.id);
-            return true;
+          const response = await this.client.post('/stories/search', {
+            workflow_state_id: firstState.id,
+            archived: false,
+            page_size: 100
           });
           
-          console.log(`Found ${stories.length} unique stories from workflows`);
+          const stories = response.data?.data || [];
+          console.log(`  Fetched ${stories.length} stories from workflow`);
+          
+          // Log first story's owner_ids for debugging
+          if (stories.length > 0) {
+            console.log(`  Sample story owner_ids: ${JSON.stringify(stories[0].owner_ids)}`);
+          }
+          
+          allStories = stories;
+        }
+      } catch (err1) {
+        console.log('Workflow stories failed:', err1.message);
+      }
+
+      // Approach 2: Get stories from first epic
+      if (allStories.length === 0) {
+        try {
+          console.log('Fetching stories from epics...');
+          const epicsResponse = await this.client.get('/epics');
+          const epics = epicsResponse.data || [];
+          
+          if (epics.length > 0) {
+            console.log(`  Fetching from epic: ${epics[0].name}`);
+            const response = await this.client.get(`/epics/${epics[0].id}/stories`);
+            const stories = response.data || [];
+            console.log(`  Fetched ${stories.length} stories from epic`);
+            
+            if (stories.length > 0) {
+              console.log(`  Sample story owner_ids: ${JSON.stringify(stories[0].owner_ids)}`);
+            }
+            
+            allStories = stories;
+          }
         } catch (err2) {
-          console.log('Workflows failed:', err2.message);
+          console.log('Epic stories failed:', err2.message);
         }
       }
 
-      // Approach 3: Epic stories
-      if (stories.length === 0) {
-        try {
-          console.log('Trying epics...');
-          const epicsResponse = await this.client.get('/epics');
-          const epics = epicsResponse.data || [];
-          console.log(`Found ${epics.length} epics`);
+      // Filter for user's stories
+      console.log(`Filtering ${allStories.length} stories for user ownership...`);
+      let myStories = allStories.filter(story => this.isStoryOwner(story));
+      
+      // If no matches, try including stories where user is the requester
+      if (myStories.length === 0) {
+        console.log('No owner matches, trying requester_id...');
+        myStories = allStories.filter(story => {
+          const requesterId = story.requested_by_id;
+          return requesterId && this.userIdsToMatch.some(id => 
+            String(id) === String(requesterId)
+          );
+        });
+      }
+      
+      console.log(`Found ${myStories.length} stories assigned to user`);
 
-          for (const epic of epics.slice(0, 3)) {
-            try {
-              const storiesResponse = await this.client.get(`/epics/${epic.id}/stories`);
-              const epicStories = storiesResponse.data || [];
-              const myStories = epicStories.filter(story => {
-                const owners = story.owner_ids || [];
-                return owners.includes(this.userId);
-              });
-              stories.push(...myStories);
-            } catch (e) {
-              // Ignore
-            }
-          }
-          console.log(`Found ${stories.length} stories from epics`);
-        } catch (err3) {
-          console.log('Epics failed:', err3.message);
-        }
+      // If still no matches, log some debug info
+      if (myStories.length === 0 && allStories.length > 0) {
+        console.log('Debug: First 3 stories owner_ids:');
+        allStories.slice(0, 3).forEach((story, i) => {
+          console.log(`  ${i + 1}. "${story.name?.substring(0, 40)}..." owners: ${JSON.stringify(story.owner_ids)}, requester: ${story.requested_by_id}`);
+        });
       }
 
       // Filter for active stories
-      const activeStories = stories.filter(story => 
+      const activeStories = myStories.filter(story => 
         story.completed !== true && 
         story.archived !== true
       );
@@ -195,7 +204,7 @@ class ShortcutService {
   }
 
   /**
-   * Get unread activity - Note: Shortcut doesn't have a traditional notifications API
+   * Get unread activity
    */
   async getNotifications() {
     console.log('Shortcut notifications not available via API');
@@ -203,14 +212,14 @@ class ShortcutService {
   }
 
   /**
-   * Mark a notification as read - Not implemented
+   * Mark a notification as read
    */
   async markNotificationRead(notificationId) {
     return true;
   }
 
   /**
-   * Mark all notifications as read - Not implemented
+   * Mark all notifications as read
    */
   async markAllNotificationsRead() {
     return true;
