@@ -26,39 +26,55 @@ class TodoistService {
   async getTasks() {
     try {
       console.log('Making Todoist API request to /tasks...');
-      const response = await this.client.get('/tasks');
       
-      console.log('Todoist response type:', typeof response.data);
-      console.log('Todoist response keys:', Object.keys(response.data || {}));
+      // Fetch all tasks with pagination
+      let allTasks = [];
+      let cursor = null;
       
-      // Handle different response structures
-      let tasks = [];
-      if (Array.isArray(response.data)) {
-        tasks = response.data;
-      } else if (response.data?.results && Array.isArray(response.data.results)) {
-        tasks = response.data.results;
-      } else if (response.data?.items && Array.isArray(response.data.items)) {
-        tasks = response.data.items;
-      } else if (response.data?.tasks && Array.isArray(response.data.tasks)) {
-        tasks = response.data.tasks;
-      } else {
-        console.error('Unexpected Todoist response structure:', JSON.stringify(response.data).slice(0, 200));
-        return [];
+      do {
+        const params = { limit: 100 };
+        if (cursor) params.cursor = cursor;
+        
+        const response = await this.client.get('/tasks', { params });
+        
+        // Handle paginated response
+        let tasks = [];
+        if (Array.isArray(response.data)) {
+          tasks = response.data;
+        } else if (response.data?.results && Array.isArray(response.data.results)) {
+          tasks = response.data.results;
+          cursor = response.data.next_cursor;
+        } else {
+          console.error('Unexpected Todoist response:', JSON.stringify(response.data).slice(0, 200));
+          break;
+        }
+        
+        allTasks.push(...tasks);
+        
+        // Stop if no more pages
+        if (!cursor) break;
+        
+      } while (cursor);
+      
+      console.log(`Todoist returned ${allTasks.length} total tasks`);
+      
+      // Log first few tasks for debugging
+      if (allTasks.length > 0) {
+        console.log('Sample tasks:');
+        allTasks.slice(0, 3).forEach((task, i) => {
+          console.log(`  ${i + 1}. "${task.content?.substring(0, 40)}..." is_completed: ${task.is_completed}, completed: ${task.completed}`);
+        });
       }
       
-      console.log(`Todoist returned ${tasks.length} total tasks`);
-      
-      // Filter out completed tasks - check both is_completed and completed fields
-      const activeTasks = tasks.filter(task => {
+      // Filter out completed tasks
+      const activeTasks = allTasks.filter(task => {
         // Check all possible completed field names
         if (task.is_completed === true) return false;
         if (task.completed === true) return false;
         if (task.checked === true) return false;
-        // Also check for string "true"
-        if (String(task.is_completed).toLowerCase() === 'true') return false;
-        if (String(task.completed).toLowerCase() === 'true') return false;
         return true;
       });
+      
       console.log(`Filtered to ${activeTasks.length} active tasks`);
       
       return activeTasks.map(task => this.formatTask(task));
@@ -104,6 +120,7 @@ class TodoistService {
   async completeTask(taskId) {
     try {
       await this.client.post(`/tasks/${taskId}/close`);
+      console.log(`Completed Todoist task ${taskId}`);
       return true;
     } catch (error) {
       console.error(`Failed to complete task ${taskId}:`, error.message);
@@ -117,6 +134,7 @@ class TodoistService {
   async uncompleteTask(taskId) {
     try {
       await this.client.post(`/tasks/${taskId}/reopen`);
+      console.log(`Reopened Todoist task ${taskId}`);
       return true;
     } catch (error) {
       console.error(`Failed to uncomplete task ${taskId}:`, error.message);
@@ -125,11 +143,29 @@ class TodoistService {
   }
 
   /**
+   * Create a new task
+   */
+  async createTask(content, options = {}) {
+    try {
+      const taskData = {
+        content,
+        ...options
+      };
+      
+      const response = await this.client.post('/tasks', taskData);
+      console.log(`Created Todoist task: "${content.substring(0, 40)}..."`);
+      return response.data;
+    } catch (error) {
+      console.error(`Failed to create task:`, error.message);
+      throw error;
+    }
+  }
+
+  /**
    * Format task from API response to database format
    */
   formatTask(task) {
     // Todoist priority: 1=default, 2=low, 3=medium, 4=high
-    // Ensure priority is 1-4, default to 1 if missing
     let priority = task.priority || 1;
     if (priority < 1 || priority > 4) {
       priority = 1;

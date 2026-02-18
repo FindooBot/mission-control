@@ -8,6 +8,7 @@ const DatabaseManager = require('../database/database');
 const configManager = require('../config/manager');
 const GitHubService = require('../services/github');
 const ShortcutService = require('../services/shortcut');
+const TodoistService = require('../services/todoist');
 
 /**
  * Create dashboard router with scheduler instance
@@ -270,6 +271,58 @@ function createDashboardRouter(scheduler) {
       } else {
         res.status(500).json({ success: false, error: 'Failed to mark all as read' });
       }
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * POST /api/todoist/tasks/:id/complete - Complete a Todoist task
+   */
+  router.post('/api/todoist/tasks/:id/complete', async (req, res) => {
+    try {
+      const config = configManager.getConfig();
+      if (!config.todoist?.apiToken) {
+        return res.status(400).json({ success: false, error: 'Todoist not configured' });
+      }
+
+      const todoist = new TodoistService(config.todoist.apiToken);
+      const result = await todoist.completeTask(req.params.id);
+
+      if (result) {
+        res.json({ success: true });
+      } else {
+        res.status(500).json({ success: false, error: 'Failed to complete task' });
+      }
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * POST /api/todoist/tasks - Create a new Todoist task
+   */
+  router.post('/api/todoist/tasks', async (req, res) => {
+    try {
+      const config = configManager.getConfig();
+      if (!config.todoist?.apiToken) {
+        return res.status(400).json({ success: false, error: 'Todoist not configured' });
+      }
+
+      const { content, due_date, priority } = req.body;
+      
+      if (!content) {
+        return res.status(400).json({ success: false, error: 'Task content is required' });
+      }
+
+      const todoist = new TodoistService(config.todoist.apiToken);
+      
+      const options = {};
+      if (due_date) options.due_date = due_date;
+      if (priority) options.priority = parseInt(priority);
+      
+      const task = await todoist.createTask(content, options);
+      res.json({ success: true, task });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
     }

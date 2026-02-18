@@ -599,6 +599,13 @@ function renderTodoistWidget() {
     return;
   }
   
+  // Add "New Task" button at top
+  let html = `
+    <div class="todoist-add-task">
+      <button class="btn btn-primary btn-sm" onclick="showAddTaskModal()">+ Add Task</button>
+    </div>
+  `;
+  
   // Sort tasks: today first, then by priority
   const sortedTasks = [...tasks].sort((a, b) => {
     const aDueToday = isDueToday(a);
@@ -608,7 +615,7 @@ function renderTodoistWidget() {
     return (b.priority || 1) - (a.priority || 1);
   });
   
-  const html = sortedTasks.slice(0, 10).map(task => {
+  html += sortedTasks.slice(0, 10).map(task => {
     const completed = task.is_completed ? 'completed' : '';
     const dueClass = getDueClass(task);
     const dueText = getDueText(task);
@@ -627,7 +634,7 @@ function renderTodoistWidget() {
     `;
   }).join('');
   
-  container.innerHTML = `<ul class="todoist-list">${html}</ul>`;
+  container.innerHTML = `<div class="todoist-list">${html}</div>`;
 }
 
 /**
@@ -819,12 +826,67 @@ function showToast(message, type = 'info') {
 }
 
 /**
- * Toggle task completion (stub - would need API endpoint)
+ * Toggle task completion - calls API to complete task
  */
-function toggleTask(taskId, currentState) {
-  console.log('Toggle task:', taskId, !currentState);
-  // This would call an API endpoint to toggle the task
-  showToast('Task toggled (refresh to see changes)', 'info');
+async function toggleTask(taskId, currentState) {
+  try {
+    const response = await fetch(`/api/todoist/tasks/${taskId}/complete`, {
+      method: 'POST'
+    });
+
+    if (response.ok) {
+      showToast('Task completed!', 'success');
+      // Remove task from UI
+      const taskEl = document.querySelector(`.todoist-task[data-task-id="${taskId}"]`);
+      if (taskEl) {
+        taskEl.style.opacity = '0.5';
+        taskEl.classList.add('completed');
+        setTimeout(() => {
+          taskEl.remove();
+          // Refresh data
+          refreshData();
+        }, 500);
+      }
+    } else {
+      showToast('Failed to complete task', 'error');
+    }
+  } catch (error) {
+    console.error('Failed to toggle task:', error);
+    showToast('Failed to complete task', 'error');
+  }
+}
+
+/**
+ * Create a new Todoist task
+ */
+async function createTodoistTask(content, dueDate = null, priority = 1) {
+  try {
+    const response = await fetch('/api/todoist/tasks', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        content,
+        due_date: dueDate,
+        priority: parseInt(priority)
+      })
+    });
+
+    if (response.ok) {
+      showToast('Task created!', 'success');
+      refreshData();
+      return true;
+    } else {
+      const error = await response.json();
+      showToast(error.error || 'Failed to create task', 'error');
+      return false;
+    }
+  } catch (error) {
+    console.error('Failed to create task:', error);
+    showToast('Failed to create task', 'error');
+    return false;
+  }
 }
 
 /**
@@ -859,6 +921,97 @@ async function loadConfigStatus() {
     
   } catch (error) {
     console.error('Failed to load config:', error);
+  }
+}
+
+/**
+ * Show Add Task Modal
+ */
+function showAddTaskModal() {
+  // Create modal if it doesn't exist
+  let modal = document.getElementById('addTaskModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'addTaskModal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Add New Task</h3>
+          <button class="modal-close" onclick="closeAddTaskModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <input type="text" id="newTaskContent" placeholder="What needs to be done?" class="modal-input">
+          <div class="modal-row">
+            <label>Due Date:</label>
+            <input type="date" id="newTaskDueDate" class="modal-input">
+          </div>
+          <div class="modal-row">
+            <label>Priority:</label>
+            <select id="newTaskPriority" class="modal-select">
+              <option value="1">Default</option>
+              <option value="2">Low</option>
+              <option value="3">Medium</option>
+              <option value="4">High</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeAddTaskModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="submitNewTask()">Add Task</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Close on click outside
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeAddTaskModal();
+    });
+
+    // Submit on Enter
+    document.getElementById('newTaskContent')?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') submitNewTask();
+    });
+  }
+
+  modal.classList.add('open');
+  document.getElementById('newTaskContent')?.focus();
+}
+
+/**
+ * Close Add Task Modal
+ */
+function closeAddTaskModal() {
+  const modal = document.getElementById('addTaskModal');
+  if (modal) {
+    modal.classList.remove('open');
+    // Clear inputs
+    const content = document.getElementById('newTaskContent');
+    const dueDate = document.getElementById('newTaskDueDate');
+    const priority = document.getElementById('newTaskPriority');
+    if (content) content.value = '';
+    if (dueDate) dueDate.value = '';
+    if (priority) priority.value = '1';
+  }
+}
+
+/**
+ * Submit new task
+ */
+async function submitNewTask() {
+  const content = document.getElementById('newTaskContent')?.value.trim();
+  const dueDate = document.getElementById('newTaskDueDate')?.value;
+  const priority = document.getElementById('newTaskPriority')?.value;
+
+  if (!content) {
+    showToast('Please enter a task', 'error');
+    return;
+  }
+
+  const success = await createTodoistTask(content, dueDate || null, priority || 1);
+  if (success) {
+    closeAddTaskModal();
   }
 }
 
