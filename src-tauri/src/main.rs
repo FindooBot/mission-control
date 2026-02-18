@@ -5,7 +5,7 @@
 
 use std::process::{Command, Stdio};
 use std::sync::Mutex;
-use tauri::{Manager, SystemTray, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem, WindowEvent};
+use tauri::Manager;
 
 struct ServerProcess(Mutex<Option<std::process::Child>>);
 
@@ -18,50 +18,8 @@ fn main() {
     // Wait a moment for the server to start
     std::thread::sleep(std::time::Duration::from_secs(2));
     
-    let tray_menu = SystemTrayMenu::new()
-        .add_item(SystemTrayMenuItem::new("Show", "show"))
-        .add_native_item(SystemTrayMenuItem::Separator)
-        .add_item(SystemTrayMenuItem::new("Quit", "quit"));
-
-    let system_tray = SystemTray::new().with_menu(tray_menu);
-
     tauri::Builder::default()
         .manage(server_process)
-        .system_tray(system_tray)
-        .on_system_tray_event(|app, event| match event {
-            SystemTrayEvent::LeftClick {
-                position: _,
-                size: _,
-                ..
-            } => {
-                let window = app.get_window("main").unwrap();
-                window.show().unwrap();
-                window.set_focus().unwrap();
-            }
-            SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
-                "show" => {
-                    let window = app.get_window("main").unwrap();
-                    window.show().unwrap();
-                    window.set_focus().unwrap();
-                }
-                "quit" => {
-                    // Kill the server process
-                    if let Some(server) = app.state::<ServerProcess>().0.lock().unwrap().take() {
-                        let _ = server.kill();
-                    }
-                    std::process::exit(0);
-                }
-                _ => {}
-            },
-            _ => {}
-        })
-        .on_window_event(|event| match event.event() {
-            WindowEvent::CloseRequested { api, .. } => {
-                event.window().hide().unwrap();
-                api.prevent_close();
-            }
-            _ => {}
-        })
         .setup(|app| {
             let window = app.get_window("main").unwrap();
             
