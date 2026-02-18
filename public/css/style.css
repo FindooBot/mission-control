@@ -447,7 +447,7 @@ input::placeholder {
   color: var(--text-secondary);
 }
 
-/* Dashboard Grid Layout */
+/* Dashboard Grid Layout - Dynamic based on enabled widgets */
 .dashboard-grid {
   flex: 1;
   padding: 24px 32px;
@@ -458,15 +458,36 @@ input::placeholder {
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
-  min-height: 0; /* Prevent grid from expanding */
+  min-height: 0;
 }
 
-/* Top row: GitHub, Shortcut */
-/* Bottom row: Todoist, Calendar */
-.widget-github { grid-column: 1; grid-row: 1; }
-.widget-shortcut { grid-column: 2; grid-row: 1; }
-.widget-todoist { grid-column: 1; grid-row: 2; }
-.widget-calendar { grid-column: 2; grid-row: 2; }
+/* Single widget */
+.dashboard-grid:has(> .widget:only-child) {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+/* Two widgets */
+.dashboard-grid:has(> .widget:nth-child(2):last-child) {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr;
+}
+
+/* Three widgets */
+.dashboard-grid:has(> .widget:nth-child(3):last-child) {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+.dashboard-grid:has(> .widget:nth-child(3):last-child) > .widget:first-child {
+  grid-column: 1 / -1;
+}
+
+/* Widget positioning - auto-flow */
+.dashboard-grid > .widget {
+  min-height: 0;
+  max-height: 100%;
+}
 
 /* ========== WIDGETS ========== */
 

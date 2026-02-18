@@ -32,11 +32,21 @@ function createDashboardRouter(scheduler) {
     // Get initial data for server-side rendering
     const data = db.getDashboardData();
     
+    // Prepare enabled services info for view
+    const enabledServices = {
+      github: !!config.github?.personalAccessToken,
+      shortcut: !!config.shortcut?.apiToken,
+      todoist: !!config.todoist?.apiToken,
+      calendar: !!(config.calendar?.personalIcalUrl || config.calendar?.workIcalUrl),
+      figma: !!config.figma?.apiToken
+    };
+    
     res.render('dashboard', {
       config: config,
       title: 'Mission Control',
       initialData: data,
-      lastUpdated: new Date().toISOString()
+      lastUpdated: new Date().toISOString(),
+      enabledServices: enabledServices
     });
   });
 
@@ -64,6 +74,9 @@ function createDashboardRouter(scheduler) {
       },
       todoist: {
         hasToken: !!config.todoist?.apiToken
+      },
+      figma: {
+        hasToken: !!config.figma?.apiToken
       }
     });
   });

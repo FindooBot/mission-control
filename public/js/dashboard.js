@@ -634,6 +634,10 @@ function renderAllWidgets() {
 function renderCalendarWidget() {
   const container = document.getElementById('calendarContent');
   const countElement = document.getElementById('calendarCount');
+  
+  // Skip if widget not present (service not enabled)
+  if (!container || !countElement) return;
+  
   const events = dashboardData.calendar || [];
 
   // Update count
@@ -689,6 +693,10 @@ function renderCalendarWidget() {
 function renderTodoistWidget() {
   const container = document.getElementById('todoistContent');
   const countElement = document.getElementById('todoistCount');
+  
+  // Skip if widget not present (service not enabled)
+  if (!container || !countElement) return;
+  
   const tasks = dashboardData.todoistTasks || [];
 
   // Update count
@@ -753,6 +761,10 @@ function renderTodoistWidget() {
 function renderShortcutWidget() {
   const container = document.getElementById('shortcutContent');
   const countElement = document.getElementById('shortcutCount');
+  
+  // Skip if widget not present (service not enabled)
+  if (!container || !countElement) return;
+  
   const stories = dashboardData.shortcutStories || [];
   const notifications = dashboardData.shortcutNotifications || [];
 
@@ -826,6 +838,10 @@ function renderShortcutWidget() {
 function renderGitHubWidget() {
   const container = document.getElementById('githubContent');
   const countElement = document.getElementById('githubCount');
+  
+  // Skip if widget not present (service not enabled)
+  if (!container || !countElement) return;
+  
   const prs = dashboardData.githubPRs || [];
   const notifications = dashboardData.githubNotifications || [];
 

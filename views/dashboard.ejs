@@ -51,7 +51,8 @@
     </div>
   </header>
 
-  <main class="dashboard-grid">
+  <main class="dashboard-grid" data-enabled="<%= Object.entries(enabledServices).filter(([k,v]) => v).map(([k]) => k).join(',') %>">
+    <% if (enabledServices.github) { %>
     <!-- GitHub Widget (Left Column, Top) -->
     <div class="widget widget-github" data-widget="github">
       <div class="widget-header">
@@ -65,7 +66,9 @@
         </div>
       </div>
     </div>
+    <% } %>
 
+    <% if (enabledServices.shortcut) { %>
     <!-- Shortcut Widget (Right Column, Top) -->
     <div class="widget widget-shortcut" data-widget="shortcut">
       <div class="widget-header">
@@ -79,7 +82,9 @@
         </div>
       </div>
     </div>
+    <% } %>
 
+    <% if (enabledServices.todoist) { %>
     <!-- Todoist Widget (Left Column, Bottom) -->
     <div class="widget widget-todoist" data-widget="todoist">
       <div class="widget-header">
@@ -93,7 +98,9 @@
         </div>
       </div>
     </div>
+    <% } %>
 
+    <% if (enabledServices.calendar) { %>
     <!-- Calendar Widget (Right Column, Bottom) -->
     <div class="widget widget-calendar" data-widget="calendar">
       <div class="widget-header">
@@ -107,6 +114,7 @@
         </div>
       </div>
     </div>
+    <% } %>
   </main>
 
   <footer class="dashboard-footer">
@@ -123,19 +131,28 @@
       <button class="notification-panel-close" id="notificationPanelClose">×</button>
     </div>
     <div class="notification-panel-tabs">
-      <button class="tab-btn active" data-tab="github">GitHub <span id="githubNotifCount"></span></button>
+      <% if (enabledServices.github) { %>
+      <button class="tab-btn<%= enabledServices.github ? ' active' : '' %>" data-tab="github">GitHub <span id="githubNotifCount"></span></button>
+      <% } %>
+      <% if (enabledServices.shortcut) { %>
       <button class="tab-btn" data-tab="shortcut">Shortcut <span id="shortcutNotifCount"></span></button>
+      <% } %>
+      <% if (enabledServices.figma) { %>
       <button class="tab-btn" data-tab="figma">Figma <span id="figmaNotifCount"></span></button>
+      <% } %>
     </div>
     <div class="notification-panel-content">
+      <% if (enabledServices.github) { %>
       <!-- GitHub Notifications Tab -->
-      <div class="tab-content active" id="githubNotifications">
+      <div class="tab-content<%= enabledServices.github ? ' active' : '' %>" id="githubNotifications">
         <div class="notification-loading">
           <div class="spinner"></div>
           <span>Loading notifications...</span>
         </div>
       </div>
+      <% } %>
       
+      <% if (enabledServices.shortcut) { %>
       <!-- Shortcut Notifications Tab -->
       <div class="tab-content" id="shortcutNotifications">
         <div class="notification-loading">
@@ -143,7 +160,9 @@
           <span>Loading notifications...</span>
         </div>
       </div>
+      <% } %>
       
+      <% if (enabledServices.figma) { %>
       <!-- Figma Notifications Tab -->
       <div class="tab-content" id="figmaNotifications">
         <div class="notification-loading">
@@ -151,6 +170,7 @@
           <span>Loading notifications...</span>
         </div>
       </div>
+      <% } %>
     </div>
     <div class="notification-panel-footer">
       <button class="btn btn-secondary btn-sm" id="markAllRead">Mark all as read</button>
