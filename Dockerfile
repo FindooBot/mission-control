@@ -8,8 +8,8 @@ RUN apk add --no-cache python3 make g++
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install dependencies and rebuild native modules
+RUN npm ci --only=production && npm rebuild better-sqlite3
 
 # Copy application code
 COPY . .
