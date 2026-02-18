@@ -46,9 +46,60 @@ class FigmaService {
   async getRecentFiles() {
     try {
       const response = await this.client.get('/me/files');
-      return response.data.files || [];
+      const recentFiles = response.data.files || [];
+      console.log(`Found ${recentFiles.length} recent files`);
+      
+      // If no recent files, try getting team files
+      if (recentFiles.length === 0) {
+        console.log('No recent files, trying team files...');
+        const teamFiles = await this.getTeamFiles();
+        return teamFiles;
+      }
+      
+      return recentFiles;
     } catch (error) {
       console.error('Failed to get Figma files:', error.message);
+      return [];
+    }
+  }
+
+  /**
+   * Get files from user's teams
+   */
+  async getTeamFiles() {
+    try {
+      // Get user's teams
+      const teamsResponse = await this.client.get('/me/teams');
+      const teams = teamsResponse.data.teams || [];
+      console.log(`Found ${teams.length} teams`);
+      
+      const allFiles = [];
+      
+      // Get projects from each team
+      for (const team of teams.slice(0, 3)) { // Limit to first 3 teams
+        try {
+          const projectsResponse = await this.client.get(`/teams/${team.id}/projects`);
+          const projects = projectsResponse.data.projects || [];
+          
+          // Get files from each project
+          for (const project of projects.slice(0, 5)) { // Limit to first 5 projects per team
+            try {
+              const filesResponse = await this.client.get(`/projects/${project.id}/files`);
+              const files = filesResponse.data.files || [];
+              allFiles.push(...files);
+            } catch (e) {
+              // Skip projects we can't access
+            }
+          }
+        } catch (e) {
+          // Skip teams we can't access
+        }
+      }
+      
+      console.log(`Found ${allFiles.length} files from teams`);
+      return allFiles;
+    } catch (error) {
+      console.error('Failed to get team files:', error.message);
       return [];
     }
   }
