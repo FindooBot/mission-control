@@ -37,6 +37,13 @@ npm run icon src-tauri/icons/icon.svg
 
 This creates all the required icon files (PNG, ICNS, ICO) from the SVG.
 
+3. **Generate icons** (required before first build):
+```bash
+npm run icon src-tauri/icons/icon.svg
+```
+
+This creates all the required icon files (PNG, ICNS, ICO) from the SVG.
+
 ## Development
 
 Run the app in development mode (with hot reload):

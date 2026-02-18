@@ -29,6 +29,9 @@ cd mission-control
 # Install dependencies
 npm install
 
+# Generate icons (required)
+npm run icon src-tauri/icons/icon.svg
+
 # Install Rust (one-time)
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
