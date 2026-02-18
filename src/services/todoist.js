@@ -46,8 +46,13 @@ class TodoistService {
         return [];
       }
       
-      console.log(`Todoist returned ${tasks.length} tasks`);
-      return tasks.map(task => this.formatTask(task));
+      console.log(`Todoist returned ${tasks.length} total tasks`);
+      
+      // Filter out completed tasks - Todoist API v1 may return all tasks
+      const activeTasks = tasks.filter(task => !task.is_completed && !task.completed);
+      console.log(`Filtered to ${activeTasks.length} active tasks`);
+      
+      return activeTasks.map(task => this.formatTask(task));
     } catch (error) {
       console.error('Failed to fetch Todoist tasks:', error.message);
       if (error.response) {
@@ -114,6 +119,13 @@ class TodoistService {
    * Format task from API response to database format
    */
   formatTask(task) {
+    // Todoist priority: 1=default, 2=low, 3=medium, 4=high
+    // Ensure priority is 1-4, default to 1 if missing
+    let priority = task.priority || 1;
+    if (priority < 1 || priority > 4) {
+      priority = 1;
+    }
+
     return {
       task_id: task.id,
       content: task.content,
@@ -121,7 +133,7 @@ class TodoistService {
       project_id: task.project_id || null,
       section_id: task.section_id || null,
       parent_id: task.parent_id || null,
-      priority: task.priority || 1,
+      priority: priority,
       due_date: task.due?.date || null,
       due_datetime: task.due?.datetime || null,
       due_string: task.due?.string || null,

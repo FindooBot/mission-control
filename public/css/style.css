@@ -756,10 +756,26 @@ input::placeholder {
   border-radius: 50%;
 }
 
-.task-priority.priority-1 { background: var(--text-tertiary); }
-.task-priority.priority-2 { background: var(--accent-orange); }
-.task-priority.priority-3 { background: var(--accent-blue); }
-.task-priority.priority-4 { background: var(--accent-red); }
+/* Todoist priority: 1=default (grey), 2=low (blue), 3=medium (orange), 4=high (red) */
+.task-priority.priority-1,
+.task-priority.priority-default { 
+  background: #C4C4C4; /* Grey for default/no priority */
+}
+
+.task-priority.priority-2,
+.task-priority.priority-low { 
+  background: var(--accent-blue); /* Blue for low */
+}
+
+.task-priority.priority-3,
+.task-priority.priority-medium { 
+  background: var(--accent-orange); /* Orange for medium */
+}
+
+.task-priority.priority-4,
+.task-priority.priority-high { 
+  background: var(--accent-red); /* Red for high */
+}
 
 /* ========== SHORTCUT WIDGET ========== */
 
