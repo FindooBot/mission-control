@@ -184,6 +184,9 @@ class Scheduler {
       console.log('📋 Fetching Todoist tasks...');
       const todoist = new TodoistService(this.config.todoist.apiToken);
       
+      // Clear old tasks first
+      this.db.clearTodoistTasks();
+      
       // Fetch all tasks
       const tasks = await todoist.getTasks();
       

@@ -417,6 +417,14 @@ class DatabaseManager {
   }
 
   /**
+   * Clear all Todoist tasks (used before fetching fresh data)
+   */
+  clearTodoistTasks() {
+    this.db.exec('DELETE FROM todoist_tasks');
+    console.log('🗑️ Cleared Todoist tasks from database');
+  }
+
+  /**
    * Get all data for dashboard
    */
   getDashboardData() {
