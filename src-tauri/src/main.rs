@@ -52,28 +52,62 @@ fn main() {
 }
 
 fn start_server() -> Option<std::process::Child> {
-    // Check if we're running from the bundled app or development
-    let current_dir = std::env::current_dir().ok()?;
+    use std::env;
     
-    // Try to find the Node.js server script
-    let server_paths = [
-        current_dir.join("src/server.js"),
-        current_dir.join("../src/server.js"),
-        current_dir.join("../../src/server.js"),
+    // Get the current executable path (works for bundled apps)
+    let exe_path = env::current_exe().ok()?;
+    let exe_dir = exe_path.parent()?;
+    
+    println!("Executable path: {:?}", exe_path);
+    println!("Executable dir: {:?}", exe_dir);
+    
+    // In a bundled macOS app, the structure is:
+    // Mission Control.app/Contents/MacOS/mission-control (the binary)
+    // We need to find src/server.js relative to Resources or the app root
+    
+    let possible_roots = [
+        // Development: current working directory
+        env::current_dir().ok()?,
+        // Bundled app: Resources directory (if we bundle the src folder there)
+        exe_dir.join("../Resources"),
+        // Bundled app: next to the binary
+        exe_dir.to_path_buf(),
+        // Bundled app: app root
+        exe_dir.join("../../.."),
     ];
     
-    let server_script = server_paths.iter().find(|p| p.exists())?;
+    for root in &possible_roots {
+        let server_script = root.join("src/server.js");
+        if server_script.exists() {
+            println!("Found server at: {:?}", server_script);
+            
+            // Set working directory to the project root (where node_modules should be)
+            let working_dir = if root.join("node_modules").exists() {
+                root.clone()
+            } else {
+                server_script.parent()?.parent()?.to_path_buf()
+            };
+            
+            println!("Working directory: {:?}", working_dir);
+            
+            let child = Command::new("node")
+                .arg(&server_script)
+                .current_dir(&working_dir)
+                .env("NODE_ENV", "production")
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+                .map_err(|e| {
+                    println!("Failed to spawn node: {}", e);
+                    e
+                })
+                .ok()?;
+            
+            println!("Server started with PID: {:?}", child.id());
+            return Some(child);
+        }
+    }
     
-    println!("Starting Mission Control server...");
-    println!("Server script: {:?}", server_script);
-    
-    let child = Command::new("node")
-        .arg(server_script)
-        .current_dir(server_script.parent()?.parent()?)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .ok()?;
-    
-    Some(child)
+    println!("Could not find src/server.js in any of: {:?}", possible_roots);
+    None
 }
