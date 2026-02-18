@@ -31,6 +31,55 @@ fn main() {
             // Navigate to the local server URL
             window.eval(&format!("window.location.replace('http://localhost:1337')")).ok();
             
+            // Setup link interception via periodic JS injection
+            let window_clone = window.clone();
+            std::thread::spawn(move || {
+                // Wait for page to load
+                std::thread::sleep(std::time::Duration::from_secs(4));
+                
+                // Inject script to handle external links
+                let js = r#"
+                    (function() {
+                        if (window.__TAURI_LINK_HANDLER__) return;
+                        window.__TAURI_LINK_HANDLER__ = true;
+                        
+                        function handleLinkClick(e) {
+                            const link = e.target.closest('a[href]');
+                            if (!link) return;
+                            
+                            const href = link.getAttribute('href');
+                            if (!href || href.startsWith('#')) return;
+                            
+                            // Check if external
+                            try {
+                                const url = new URL(href, window.location.href);
+                                if (url.hostname !== 'localhost' && url.hostname !== '127.0.0.1') {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    // Use Tauri shell API
+                                    if (window.__TAURI__) {
+                                        window.__TAURI__.shell.open(url.href);
+                                    } else {
+                                        // Fallback: create a custom event
+                                        const event = new CustomEvent('tauri-open-external', { detail: url.href });
+                                        document.dispatchEvent(event);
+                                    }
+                                    return false;
+                                }
+                            } catch (e) {}
+                        }
+                        
+                        document.addEventListener('click', handleLinkClick, true);
+                        console.log('Tauri link handler installed');
+                    })();
+                "#;
+                
+                loop {
+                    window_clone.eval(js).ok();
+                    std::thread::sleep(std::time::Duration::from_secs(5));
+                }
+            });
+            
             // Wait for server to be ready, then show window
             std::thread::spawn(move || {
                 let mut retries = 0;

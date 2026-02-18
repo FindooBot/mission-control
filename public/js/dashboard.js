@@ -3,6 +3,29 @@
  * Handles dynamic loading, real-time updates, dark mode, and PR review integration
  */
 
+// Tauri integration - handle external links
+if (window.__TAURI__) {
+  document.addEventListener('click', function(e) {
+    const link = e.target.closest('a[href]');
+    if (!link) return;
+    
+    const href = link.getAttribute('href');
+    if (!href || href.startsWith('#')) return;
+    
+    // Check if external link
+    try {
+      const url = new URL(href, window.location.href);
+      if (url.hostname !== 'localhost' && url.hostname !== '127.0.0.1' && url.hostname !== window.location.hostname) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.__TAURI__.shell.open(url.href);
+        return false;
+      }
+    } catch (e) {}
+  }, true);
+  console.log('Tauri link handler installed');
+}
+
 // Global state
 let dashboardData = null;
 let lastUpdated = null;

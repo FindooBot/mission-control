@@ -4,7 +4,7 @@
     "beforeDevCommand": "npm run start",
     "devPath": "http://localhost:1337",
     "distDir": "../public",
-    "withGlobalTauri": false
+    "withGlobalTauri": true
   },
   "tauri": {
     "allowlist": {
@@ -62,7 +62,8 @@
       }
     },
     "security": {
-      "csp": null
+      "csp": "default-src 'self' http://localhost:1337; script-src 'self' 'unsafe-inline' http://localhost:1337; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:1337; img-src 'self' https: data:;",
+      "dangerousUseHttpScheme": true
     },
     "updater": {
       "active": false
