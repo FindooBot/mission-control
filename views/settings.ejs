@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="setup-page">
+  <div class="setup-container">
+    <div class="setup-card">
+      <div class="setup-header">
+        <div class="logo">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 6V12L16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h1>Settings</h1>
+        <p class="subtitle">Update your dashboard configuration</p>
+      </div>
+
+      <% if (query.error) { %>
+        <div class="alert alert-error">
+          <%= query.error %>
+        </div>
+      <% } %>
+
+      <% if (query.success) { %>
+        <div class="alert alert-success">
+          <strong>Settings saved!</strong> Your changes have been applied.
+        </div>
+      <% } %>
+
+      <form action="/settings/update" method="POST" class="setup-form">
+        
+        <!-- Calendar Section -->
+        <div class="form-section">
+          <h2>📅 Calendar</h2>
+          <div class="form-group">
+            <label for="personalIcalUrl">Personal iCal URL</label>
+            <input type="url" id="personalIcalUrl" name="personalIcalUrl" 
+                   value="<%= config.calendar?.personalIcalUrl || '' %>"
+                   placeholder="https://calendar.google.com/calendar/ical/...">
+            <span class="help-text">Your personal calendar feed URL</span>
+          </div>
+          <div class="form-group">
+            <label for="workIcalUrl">Work iCal URL</label>
+            <input type="url" id="workIcalUrl" name="workIcalUrl" 
+                   value="<%= config.calendar?.workIcalUrl || '' %>"
+                   placeholder="https://calendar.google.com/calendar/ical/...">
+            <span class="help-text">Your work calendar feed URL</span>
+          </div>
+        </div>
+
+        <!-- Shortcut Section -->
+        <div class="form-section">
+          <h2>🚀 Shortcut (Clubhouse)</h2>
+          <div class="form-group">
+            <label for="shortcutApiToken">API Token</label>
+            <input type="password" id="shortcutApiToken" name="shortcutApiToken" 
+                   value="<%= config.shortcut?.apiToken || '' %>"
+                   placeholder="Enter new token to change">
+            <span class="help-text">Get this from Shortcut Settings → API Tokens. Leave as-is to keep current token.</span>
+          </div>
+          <div class="form-group">
+            <label for="shortcutWorkspaceName">Workspace Name</label>
+            <input type="text" id="shortcutWorkspaceName" name="shortcutWorkspaceName" 
+                   value="<%= config.shortcut?.workspaceName || '' %>"
+                   placeholder="your-workspace">
+            <span class="help-text">Your Shortcut workspace slug</span>
+          </div>
+        </div>
+
+        <!-- GitHub Section -->
+        <div class="form-section">
+          <h2>🐙 GitHub</h2>
+          <div class="form-group">
+            <label for="githubToken">Personal Access Token</label>
+            <input type="password" id="githubToken" name="githubToken" 
+                   value="<%= config.github?.personalAccessToken || '' %>"
+                   placeholder="Enter new token to change">
+            <span class="help-text">GitHub Settings → Developer settings → Personal access tokens. Leave as-is to keep current token.</span>
+          </div>
+          <div class="form-group">
+            <label for="githubRepo">Private Repo to Monitor</label>
+            <input type="text" id="githubRepo" name="githubRepo" 
+                   value="<%= config.github?.privateRepo || 'KimonoIM/web' %>"
+                   placeholder="owner/repo">
+          </div>
+          <div class="form-group checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="useGhCli" name="useGhCli" 
+                     <%= config.github?.useGhCli ? 'checked' : '' %>>
+              <span class="checkbox-custom"></span>
+              <span class="checkbox-text">Use gh CLI for private repo access</span>
+            </label>
+            <span class="help-text">Mounts host's gh CLI credentials into container</span>
+          </div>
+        </div>
+
+        <!-- Todoist Section -->
+        <div class="form-section">
+          <h2>✅ Todoist</h2>
+          <div class="form-group">
+            <label for="todoistToken">API Token</label>
+            <input type="password" id="todoistToken" name="todoistToken" 
+                   value="<%= config.todoist?.apiToken || '' %>"
+                   placeholder="Enter new token to change">
+            <span class="help-text">Todoist Settings → Integrations → API token. Leave as-is to keep current token.</span>
+          </div>
+        </div>
+
+        <div class="form-actions" style="display: flex; gap: 12px;">
+          <a href="/" class="btn btn-secondary" style="flex: 1;">← Back to Dashboard</a>
+          <button type="submit" class="btn btn-primary" style="flex: 1;">
+            Save Changes
+          </button>
+        </div>
+      </form>
+
+      <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border-color);">
+        <p style="font-size: 13px; color: var(--text-secondary); text-align: center;">
+          Mission Control v1.0.0 • <a href="/">Dashboard</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Parse query parameters for success/error messages
+    const params = new URLSearchParams(window.location.search);
+    const query = {};
+    for (const [key, value] of params) {
+      query[key] = value;
+    }
+  </script>
+</body>
+</html>
