@@ -157,6 +157,12 @@ function createDashboardRouter(scheduler) {
         updates.todoistToken = '';
       }
       
+      if (req.body.figmaToken && !req.body.figmaToken.includes('•')) {
+        updates.figmaToken = req.body.figmaToken;
+      } else if (req.body.figmaToken === '') {
+        updates.figmaToken = '';
+      }
+      
       // Merge with current config values for fields not updated
       const formData = {
         personalIcalUrl: updates.personalIcalUrl !== undefined ? updates.personalIcalUrl : currentConfig.calendar?.personalIcalUrl,
@@ -166,7 +172,8 @@ function createDashboardRouter(scheduler) {
         githubToken: updates.githubToken !== undefined ? updates.githubToken : currentConfig.github?.personalAccessToken,
         githubRepo: updates.githubRepo !== undefined ? updates.githubRepo : currentConfig.github?.privateRepo,
         useGhCli: updates.useGhCli,
-        todoistToken: updates.todoistToken !== undefined ? updates.todoistToken : currentConfig.todoist?.apiToken
+        todoistToken: updates.todoistToken !== undefined ? updates.todoistToken : currentConfig.todoist?.apiToken,
+        figmaToken: updates.figmaToken !== undefined ? updates.figmaToken : currentConfig.figma?.apiToken
       };
       
       configManager.updateFromForm(formData);
