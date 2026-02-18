@@ -10,6 +10,7 @@ const ShortcutService = require('./services/shortcut');
 const GitHubService = require('./services/github');
 const TodoistService = require('./services/todoist');
 const CalendarService = require('./services/calendar');
+const FigmaService = require('./services/figma');
 const configManager = require('./config/manager');
 
 class Scheduler {
@@ -21,6 +22,7 @@ class Scheduler {
       shortcut: null,
       github: null,
       todoist: null,
+      figma: null,
       calendar: null
     };
     this.isRunning = false;
@@ -101,6 +103,9 @@ class Scheduler {
 
       // Fetch Todoist data
       await this.fetchTodoistData();
+
+      // Fetch Figma data
+      await this.fetchFigmaData();
 
       const duration = Date.now() - startTime;
       console.log(`✅ Work data fetch completed in ${duration}ms`);
@@ -238,6 +243,40 @@ class Scheduler {
   }
 
   /**
+   * Fetch Figma notifications
+   */
+  async fetchFigmaData() {
+    try {
+      if (!this.config.figma?.apiToken) {
+        console.log('⚠️ Figma not configured, skipping');
+        return;
+      }
+
+      console.log('🎨 Fetching Figma notifications...');
+      const figma = new FigmaService(this.config.figma.apiToken);
+      
+      // Clear old notifications first
+      this.db.clearFigmaNotifications();
+      
+      // Fetch notifications
+      const notifications = await figma.getNotifications();
+      
+      if (notifications.length === 0) {
+        console.log('⚠️ No Figma notifications found');
+      } else {
+        console.log(`🎨 Fetched ${notifications.length} Figma notifications`);
+      }
+      
+      this.db.upsertFigmaNotifications(notifications);
+
+      this.lastFetchTimes.figma = new Date().toISOString();
+      console.log('🎨 Figma data updated');
+    } catch (error) {
+      console.error('❌ Figma fetch error:', error.message);
+    }
+  }
+
+  /**
    * Manual fetch trigger (for API endpoint)
    */
   async manualFetch(service) {
@@ -250,6 +289,9 @@ class Scheduler {
         break;
       case 'todoist':
         await this.fetchTodoistData();
+        break;
+      case 'figma':
+        await this.fetchFigmaData();
         break;
       case 'calendar':
         await this.fetchCalendarData();

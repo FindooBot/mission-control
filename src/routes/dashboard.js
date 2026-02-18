@@ -9,6 +9,7 @@ const configManager = require('../config/manager');
 const GitHubService = require('../services/github');
 const ShortcutService = require('../services/shortcut');
 const TodoistService = require('../services/todoist');
+const FigmaService = require('../services/figma');
 
 /**
  * Create dashboard router with scheduler instance

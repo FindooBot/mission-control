@@ -125,6 +125,7 @@
     <div class="notification-panel-tabs">
       <button class="tab-btn active" data-tab="github">GitHub <span id="githubNotifCount"></span></button>
       <button class="tab-btn" data-tab="shortcut">Shortcut <span id="shortcutNotifCount"></span></button>
+      <button class="tab-btn" data-tab="figma">Figma <span id="figmaNotifCount"></span></button>
     </div>
     <div class="notification-panel-content">
       <!-- GitHub Notifications Tab -->
@@ -137,6 +138,14 @@
       
       <!-- Shortcut Notifications Tab -->
       <div class="tab-content" id="shortcutNotifications">
+        <div class="notification-loading">
+          <div class="spinner"></div>
+          <span>Loading notifications...</span>
+        </div>
+      </div>
+      
+      <!-- Figma Notifications Tab -->
+      <div class="tab-content" id="figmaNotifications">
         <div class="notification-loading">
           <div class="spinner"></div>
           <span>Loading notifications...</span>

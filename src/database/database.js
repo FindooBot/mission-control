@@ -214,6 +214,27 @@ class DatabaseManager {
       CREATE INDEX IF NOT EXISTS idx_todoist_priority ON todoist_tasks(priority);
     `);
 
+    // Figma Notifications
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS figma_notifications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        notification_id TEXT UNIQUE NOT NULL,
+        file_key TEXT NOT NULL,
+        file_name TEXT,
+        comment_id TEXT,
+        message TEXT,
+        author TEXT,
+        author_img TEXT,
+        created_at DATETIME,
+        is_mention BOOLEAN DEFAULT 0,
+        is_reply BOOLEAN DEFAULT 0,
+        url TEXT,
+        read BOOLEAN DEFAULT 0
+      );
+      CREATE INDEX IF NOT EXISTS idx_figma_unread ON figma_notifications(read);
+      CREATE INDEX IF NOT EXISTS idx_figma_created ON figma_notifications(created_at);
+    `);
+
     console.log('✅ Database tables created');
   }
 
@@ -441,6 +462,41 @@ class DatabaseManager {
   }
 
   /**
+   * Clear all Figma notifications (used before fetching fresh data)
+   */
+  clearFigmaNotifications() {
+    this.db.exec('DELETE FROM figma_notifications');
+    console.log('🗑️ Cleared Figma notifications from database');
+  }
+
+  /**
+   * Insert or update Figma notifications
+   */
+  upsertFigmaNotifications(notifications) {
+    const stmt = this.db.prepare(`
+      INSERT INTO figma_notifications 
+        (notification_id, file_key, file_name, comment_id, message, author, 
+         author_img, created_at, is_mention, is_reply, url, read)
+      VALUES 
+        (@notification_id, @file_key, @file_name, @comment_id, @message, @author,
+         @author_img, @created_at, @is_mention, @is_reply, @url, @read)
+      ON CONFLICT(notification_id) DO UPDATE SET
+        message = excluded.message,
+        read = excluded.read,
+        updated_at = CURRENT_TIMESTAMP
+    `);
+
+    const insertMany = this.db.transaction((notifications) => {
+      for (const notif of notifications) {
+        stmt.run(notif);
+      }
+    });
+
+    insertMany(notifications);
+    console.log(`🎨 Synced ${notifications.length} Figma notifications`);
+  }
+
+  /**
    * Get all data for dashboard
    */
   getDashboardData() {
@@ -491,6 +547,13 @@ class DatabaseManager {
           CASE WHEN due_date = date('now') THEN 0 ELSE 1 END,
           priority DESC,
           created_at ASC
+      `).all(),
+
+      // Figma notifications
+      figmaNotifications: this.db.prepare(`
+        SELECT * FROM figma_notifications 
+        WHERE read = 0
+        ORDER BY created_at DESC
       `).all()
     };
   }

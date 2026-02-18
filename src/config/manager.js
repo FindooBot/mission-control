@@ -48,6 +48,9 @@ const defaultConfig = {
   },
   todoist: {
     apiToken: ''
+  },
+  figma: {
+    apiToken: ''
   }
 };
 
@@ -113,6 +116,9 @@ class ConfigManager {
       },
       todoist: {
         apiToken: formData.todoistToken || ''
+      },
+      figma: {
+        apiToken: formData.figmaToken || ''
       }
     };
 
