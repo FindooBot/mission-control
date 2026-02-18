@@ -19,6 +19,7 @@ class ShortcutService {
       timeout: 10000
     });
     this.userId = null;
+    this.user = null;
   }
 
   /**
@@ -28,6 +29,7 @@ class ShortcutService {
     try {
       const response = await this.client.get('/member');
       this.userId = response.data.id;
+      this.user = response.data;
       return response.data;
     } catch (error) {
       console.error('Failed to get Shortcut user:', error.message);
@@ -36,7 +38,7 @@ class ShortcutService {
   }
 
   /**
-   * Get stories where user is owner using search API
+   * Get stories where user is owner
    */
   async getMyStories() {
     try {
@@ -44,22 +46,61 @@ class ShortcutService {
         await this.getCurrentUser();
       }
 
-      // Use search endpoint to find stories owned by current user
-      // Search query: owner:me state:unstarted,started
-      const response = await this.client.get('/search/stories', {
-        params: {
-          query: `owner:me is:story`,
-          page_size: 25
-        }
-      });
+      console.log(`Fetching Shortcut stories for user ${this.userId} (${this.user?.name || 'unknown'})`);
 
-      const stories = response.data.data || [];
+      // Try multiple approaches to get stories
+      let stories = [];
+
+      // Approach 1: Search for stories with owner_id filter
+      try {
+        const response = await this.client.get('/search/stories', {
+          params: {
+            query: '',  // Empty query, filter by owner
+            page_size: 50
+          }
+        });
+
+        // Filter stories where user is owner
+        const allStories = response.data.data || [];
+        stories = allStories.filter(story => {
+          const owners = story.owner_ids || [];
+          return owners.includes(this.userId) || story.requested_by_id === this.userId;
+        });
+
+        console.log(`Found ${stories.length} stories from search`);
+      } catch (searchError) {
+        console.error('Search approach failed:', searchError.message);
+      }
+
+      // Approach 2: If search failed, try fetching all stories and filtering
+      if (stories.length === 0) {
+        try {
+          console.log('Trying direct stories endpoint...');
+          const response = await this.client.get('/stories', {
+            params: {
+              page_size: 100
+            }
+          });
+
+          const allStories = response.data || [];
+          stories = allStories.filter(story => {
+            const owners = story.owner_ids || [];
+            return owners.includes(this.userId) || story.requested_by_id === this.userId;
+          });
+
+          console.log(`Found ${stories.length} stories from direct endpoint`);
+        } catch (directError) {
+          console.error('Direct approach failed:', directError.message);
+        }
+      }
 
       // Filter for active stories (not completed/archived)
       const activeStories = stories.filter(story => 
         story.completed === false && 
         story.archived === false
       );
+
+      console.log(`Found ${activeStories.length} active stories assigned to user`);
 
       return activeStories.map(story => ({
         story_id: story.id,
@@ -82,19 +123,18 @@ class ShortcutService {
       }));
     } catch (error) {
       console.error('Failed to fetch Shortcut stories:', error.message);
-      if (error.response) {
-        console.error('Response status:', error.response.status);
-        console.error('Response data:', error.response.data);
-      }
       return [];
     }
   }
 
   /**
-   * Get unread notifications for mentions and assignments
+   * Get unread notifications - Note: This endpoint may not exist in all Shortcut plans
    */
   async getNotifications() {
     try {
+      console.log('Fetching Shortcut notifications...');
+
+      // Try the notifications endpoint
       const response = await this.client.get('/notifications');
 
       // Filter for unread notifications
@@ -114,9 +154,11 @@ class ShortcutService {
         notified_at: notification.updated_at || notification.created_at
       }));
     } catch (error) {
-      console.error('Failed to fetch Shortcut notifications:', error.message);
-      if (error.response) {
-        console.error('Response status:', error.response.status);
+      // Notifications API might not be available on all plans
+      if (error.response?.status === 404) {
+        console.log('Shortcut notifications endpoint not available (may require different plan)');
+      } else {
+        console.error('Failed to fetch Shortcut notifications:', error.message);
       }
       return [];
     }

@@ -81,6 +81,8 @@ class GitHubService {
    */
   async getPrivatePRs(repoFullName) {
     try {
+      console.log(`Attempting to fetch private PRs for ${repoFullName} using gh CLI...`);
+      
       const { stdout } = await execAsync(
         `gh pr list --repo ${repoFullName} --json number,title,author,createdAt,updatedAt,url,isDraft,headRefName,baseRefName,state,body --state open`,
         { timeout: 15000 }
@@ -99,9 +101,16 @@ class GitHubService {
 
       return prsWithReviews.map(pr => this.formatGhPR(pr, owner, repo));
     } catch (error) {
-      console.error(`Failed to fetch private PRs for ${repoFullName}:`, error.message);
-      // Fallback to REST API if gh CLI fails
-      console.log('Falling back to REST API...');
+      console.error(`Failed to fetch private PRs for ${repoFullName} via gh CLI:`, error.message);
+      
+      // If gh CLI auth failed, provide helpful message
+      if (error.message.includes('401') || error.message.includes('authentication')) {
+        console.log('⚠️  GitHub CLI authentication required. Run "gh auth login" on your host machine.');
+        console.log('   The gh auth token should be mounted into the Docker container.');
+      }
+      
+      // Fallback to REST API
+      console.log('Falling back to REST API (may fail if token lacks repo access)...');
       return this.getPublicPRs(repoFullName);
     }
   }

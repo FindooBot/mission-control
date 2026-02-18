@@ -1,11 +1,11 @@
 /**
  * Todoist Service
- * Interacts with Todoist REST API v2
+ * Interacts with Todoist REST API v1
  */
 
 const axios = require('axios');
 
-const TODOIST_API_BASE = 'https://api.todoist.com/rest/v2';
+const TODOIST_API_BASE = 'https://api.todoist.com/api/v1';
 
 class TodoistService {
   constructor(apiToken) {
