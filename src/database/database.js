@@ -184,6 +184,257 @@ class DatabaseManager {
   }
 
   /**
+   * Insert or update calendar events
+   */
+  upsertCalendarEvents(events) {
+    const stmt = this.db.prepare(`
+      INSERT INTO calendar_events 
+        (uid, summary, description, start_time, end_time, location, calendar_type)
+      VALUES 
+        (@uid, @summary, @description, @start_time, @end_time, @location, @calendar_type)
+      ON CONFLICT(uid) DO UPDATE SET
+        summary = excluded.summary,
+        description = excluded.description,
+        start_time = excluded.start_time,
+        end_time = excluded.end_time,
+        location = excluded.location,
+        calendar_type = excluded.calendar_type,
+        updated_at = CURRENT_TIMESTAMP
+    `);
+
+    const insertMany = this.db.transaction((events) => {
+      for (const event of events) {
+        stmt.run(event);
+      }
+    });
+
+    insertMany(events);
+    console.log(`📅 Synced ${events.length} calendar events`);
+  }
+
+  /**
+   * Insert or update Shortcut stories
+   */
+  upsertShortcutStories(stories) {
+    const stmt = this.db.prepare(`
+      INSERT INTO shortcut_stories 
+        (story_id, name, description, story_type, state, workflow_state_id, project_id, 
+         epic_id, owner_ids, requested_by_id, estimate, deadline, started_at, completed_at, 
+         created_at)
+      VALUES 
+        (@story_id, @name, @description, @story_type, @state, @workflow_state_id, @project_id,
+         @epic_id, @owner_ids, @requested_by_id, @estimate, @deadline, @started_at, @completed_at,
+         @created_at)
+      ON CONFLICT(story_id) DO UPDATE SET
+        name = excluded.name,
+        description = excluded.description,
+        story_type = excluded.story_type,
+        state = excluded.state,
+        workflow_state_id = excluded.workflow_state_id,
+        project_id = excluded.project_id,
+        epic_id = excluded.epic_id,
+        owner_ids = excluded.owner_ids,
+        estimate = excluded.estimate,
+        deadline = excluded.deadline,
+        started_at = excluded.started_at,
+        completed_at = excluded.completed_at,
+        updated_at = CURRENT_TIMESTAMP
+    `);
+
+    const insertMany = this.db.transaction((stories) => {
+      for (const story of stories) {
+        stmt.run(story);
+      }
+    });
+
+    insertMany(stories);
+    console.log(`🚀 Synced ${stories.length} Shortcut stories`);
+  }
+
+  /**
+   * Insert or update Shortcut notifications
+   */
+  upsertShortcutNotifications(notifications) {
+    const stmt = this.db.prepare(`
+      INSERT INTO shortcut_notifications 
+        (notification_id, type, story_id, epic_id, actor_id, actor_name, message, read, notified_at)
+      VALUES 
+        (@notification_id, @type, @story_id, @epic_id, @actor_id, @actor_name, @message, @read, @notified_at)
+      ON CONFLICT(notification_id) DO UPDATE SET
+        type = excluded.type,
+        message = excluded.message,
+        read = excluded.read,
+        notified_at = excluded.notified_at,
+        created_at = CURRENT_TIMESTAMP
+    `);
+
+    const insertMany = this.db.transaction((notifications) => {
+      for (const notif of notifications) {
+        stmt.run(notif);
+      }
+    });
+
+    insertMany(notifications);
+    console.log(`🔔 Synced ${notifications.length} Shortcut notifications`);
+  }
+
+  /**
+   * Insert or update GitHub PRs
+   */
+  upsertGitHubPRs(prs) {
+    const stmt = this.db.prepare(`
+      INSERT INTO github_prs 
+        (pr_id, number, title, body, state, repo_owner, repo_name, author_login, 
+         author_avatar, head_branch, base_branch, draft, mergeable, merged, merged_at,
+         created_at, updated_at, html_url, review_requested)
+      VALUES 
+        (@pr_id, @number, @title, @body, @state, @repo_owner, @repo_name, @author_login,
+         @author_avatar, @head_branch, @base_branch, @draft, @mergeable, @merged, @merged_at,
+         @created_at, @updated_at, @html_url, @review_requested)
+      ON CONFLICT(pr_id) DO UPDATE SET
+        title = excluded.title,
+        body = excluded.body,
+        state = excluded.state,
+        author_login = excluded.author_login,
+        author_avatar = excluded.author_avatar,
+        draft = excluded.draft,
+        mergeable = excluded.mergeable,
+        merged = excluded.merged,
+        merged_at = excluded.merged_at,
+        updated_at = excluded.updated_at,
+        review_requested = excluded.review_requested
+    `);
+
+    const insertMany = this.db.transaction((prs) => {
+      for (const pr of prs) {
+        stmt.run(pr);
+      }
+    });
+
+    insertMany(prs);
+    console.log(`🐙 Synced ${prs.length} GitHub PRs`);
+  }
+
+  /**
+   * Insert or update GitHub notifications
+   */
+  upsertGitHubNotifications(notifications) {
+    const stmt = this.db.prepare(`
+      INSERT INTO github_notifications 
+        (notification_id, thread_id, reason, unread, subject_title, subject_type, 
+         subject_url, repository_name, repository_owner, updated_at, last_read_at)
+      VALUES 
+        (@notification_id, @thread_id, @reason, @unread, @subject_title, @subject_type,
+         @subject_url, @repository_name, @repository_owner, @updated_at, @last_read_at)
+      ON CONFLICT(notification_id) DO UPDATE SET
+        reason = excluded.reason,
+        unread = excluded.unread,
+        subject_title = excluded.subject_title,
+        updated_at = excluded.updated_at,
+        last_read_at = excluded.last_read_at
+    `);
+
+    const insertMany = this.db.transaction((notifications) => {
+      for (const notif of notifications) {
+        stmt.run(notif);
+      }
+    });
+
+    insertMany(notifications);
+    console.log(`🔔 Synced ${notifications.length} GitHub notifications`);
+  }
+
+  /**
+   * Insert or update Todoist tasks
+   */
+  upsertTodoistTasks(tasks) {
+    const stmt = this.db.prepare(`
+      INSERT INTO todoist_tasks 
+        (task_id, content, description, project_id, section_id, parent_id, priority,
+         due_date, due_datetime, due_string, is_completed, labels, assignee_id, 
+         creator_id, created_at, url)
+      VALUES 
+        (@task_id, @content, @description, @project_id, @section_id, @parent_id, @priority,
+         @due_date, @due_datetime, @due_string, @is_completed, @labels, @assignee_id,
+         @creator_id, @created_at, @url)
+      ON CONFLICT(task_id) DO UPDATE SET
+        content = excluded.content,
+        description = excluded.description,
+        priority = excluded.priority,
+        due_date = excluded.due_date,
+        due_datetime = excluded.due_datetime,
+        due_string = excluded.due_string,
+        is_completed = excluded.is_completed,
+        labels = excluded.labels,
+        updated_at = CURRENT_TIMESTAMP
+    `);
+
+    const insertMany = this.db.transaction((tasks) => {
+      for (const task of tasks) {
+        stmt.run(task);
+      }
+    });
+
+    insertMany(tasks);
+    console.log(`✅ Synced ${tasks.length} Todoist tasks`);
+  }
+
+  /**
+   * Get all data for dashboard
+   */
+  getDashboardData() {
+    const today = new Date().toISOString().split('T')[0];
+    
+    return {
+      // Today's calendar events
+      calendar: this.db.prepare(`
+        SELECT * FROM calendar_events 
+        WHERE date(start_time) = date('now')
+        ORDER BY start_time ASC
+      `).all(),
+
+      // Active Shortcut stories
+      shortcutStories: this.db.prepare(`
+        SELECT * FROM shortcut_stories 
+        WHERE completed_at IS NULL
+        ORDER BY deadline ASC NULLS LAST, updated_at DESC
+      `).all(),
+
+      // Unread Shortcut notifications
+      shortcutNotifications: this.db.prepare(`
+        SELECT * FROM shortcut_notifications 
+        WHERE read = 0
+        ORDER BY notified_at DESC
+      `).all(),
+
+      // Open GitHub PRs
+      githubPRs: this.db.prepare(`
+        SELECT * FROM github_prs 
+        WHERE state = 'open'
+        ORDER BY updated_at DESC
+      `).all(),
+
+      // Unread GitHub notifications
+      githubNotifications: this.db.prepare(`
+        SELECT * FROM github_notifications 
+        WHERE unread = 1
+        ORDER BY updated_at DESC
+      `).all(),
+
+      // Todoist tasks due today or overdue
+      todoistTasks: this.db.prepare(`
+        SELECT * FROM todoist_tasks 
+        WHERE is_completed = 0 
+          AND (due_date IS NULL OR due_date >= date('now'))
+        ORDER BY 
+          CASE WHEN due_date = date('now') THEN 0 ELSE 1 END,
+          priority DESC,
+          created_at ASC
+      `).all()
+    };
+  }
+
+  /**
    * Get database instance
    */
   getDb() {
