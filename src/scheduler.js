@@ -122,6 +122,9 @@ class Scheduler {
       console.log('🚀 Fetching Shortcut data...');
       const shortcut = new ShortcutService(this.config.shortcut.apiToken);
       
+      // Clear old stories first
+      this.db.clearShortcutStories();
+      
       // Fetch stories
       const stories = await shortcut.getMyStories();
       
@@ -155,6 +158,9 @@ class Scheduler {
       }
 
       const github = new GitHubService(this.config.github);
+      
+      // Clear old PRs first
+      this.db.clearGitHubPRs();
       
       // Fetch PRs
       const prs = await github.getAllPRs();

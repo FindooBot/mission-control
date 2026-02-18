@@ -286,6 +286,14 @@ class DatabaseManager {
   }
 
   /**
+   * Clear all Shortcut stories (used before fetching fresh data)
+   */
+  clearShortcutStories() {
+    this.db.exec('DELETE FROM shortcut_stories');
+    console.log('🗑️ Cleared Shortcut stories from database');
+  }
+
+  /**
    * Insert or update Shortcut notifications
    */
   upsertShortcutNotifications(notifications) {
@@ -350,6 +358,14 @@ class DatabaseManager {
 
     insertMany(prs);
     console.log(`🐙 Synced ${prs.length} GitHub PRs`);
+  }
+
+  /**
+   * Clear all GitHub PRs (used before fetching fresh data)
+   */
+  clearGitHubPRs() {
+    this.db.exec('DELETE FROM github_prs');
+    console.log('🗑️ Cleared GitHub PRs from database');
   }
 
   /**
