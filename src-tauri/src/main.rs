@@ -11,6 +11,12 @@ use std::path::PathBuf;
 
 struct ServerProcess(Mutex<Option<std::process::Child>>);
 
+// Tauri command to open external URLs
+#[tauri::command]
+fn open_external(url: String) {
+    let _ = open::that(url);
+}
+
 fn main() {
     // Set config path for Tauri app
     set_tauri_config_path();
@@ -24,61 +30,13 @@ fn main() {
     std::thread::sleep(std::time::Duration::from_secs(2));
     
     tauri::Builder::default()
+        .invoke_handler(tauri::generate_handler![open_external])
         .manage(server_process)
         .setup(|app| {
             let window = app.get_window("main").unwrap();
             
             // Navigate to the local server URL
             window.eval(&format!("window.location.replace('http://localhost:1337')")).ok();
-            
-            // Setup link interception via periodic JS injection
-            let window_clone = window.clone();
-            std::thread::spawn(move || {
-                // Wait for page to load
-                std::thread::sleep(std::time::Duration::from_secs(4));
-                
-                // Inject script to handle external links
-                let js = r#"
-                    (function() {
-                        if (window.__TAURI_LINK_HANDLER__) return;
-                        window.__TAURI_LINK_HANDLER__ = true;
-                        
-                        function handleLinkClick(e) {
-                            const link = e.target.closest('a[href]');
-                            if (!link) return;
-                            
-                            const href = link.getAttribute('href');
-                            if (!href || href.startsWith('#')) return;
-                            
-                            // Check if external
-                            try {
-                                const url = new URL(href, window.location.href);
-                                if (url.hostname !== 'localhost' && url.hostname !== '127.0.0.1') {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    // Use Tauri shell API
-                                    if (window.__TAURI__) {
-                                        window.__TAURI__.shell.open(url.href);
-                                    } else {
-                                        // Fallback: create a custom event
-                                        const event = new CustomEvent('tauri-open-external', { detail: url.href });
-                                        document.dispatchEvent(event);
-                                    }
-                                    return false;
-                                }
-                            } catch (e) {}
-                        }
-                        
-                        document.addEventListener('click', handleLinkClick, true);
-                        console.log('Tauri link handler installed');
-                    })();
-                "#;
-                
-                loop {
-                    window_clone.eval(js).ok();
-                    std::thread::sleep(std::time::Duration::from_secs(5));
-                }
-            });
             
             // Wait for server to be ready, then show window
             std::thread::spawn(move || {
@@ -88,6 +46,36 @@ fn main() {
                     
                     // Try to connect to the server
                     if reqwest::blocking::get("http://localhost:1337/health").is_ok() {
+                        // Inject link handler after server is ready
+                        let js = r#"
+                            (function() {
+                                if (window.__TAURI_LINK_HANDLER__) return;
+                                window.__TAURI_LINK_HANDLER__ = true;
+                                
+                                document.addEventListener('click', function(e) {
+                                    const link = e.target.closest('a[href]');
+                                    if (!link) return;
+                                    
+                                    const href = link.getAttribute('href');
+                                    if (!href || href.startsWith('#')) return;
+                                    
+                                    try {
+                                        const url = new URL(href, window.location.href);
+                                        if (url.hostname !== 'localhost' && url.hostname !== '127.0.0.1') {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            // Call Tauri command
+                                            window.__TAURI__.invoke('open_external', { url: url.href });
+                                            return false;
+                                        }
+                                    } catch (e) {}
+                                }, true);
+                                
+                                console.log('Tauri link handler installed');
+                            })();
+                        "#;
+                        window.eval(js).ok();
+                        
                         window.show().unwrap();
                         window.set_focus().unwrap();
                         break;
@@ -95,7 +83,6 @@ fn main() {
                     
                     retries += 1;
                     if retries > 30 {
-                        // Server didn't start, show window anyway
                         window.show().unwrap();
                         break;
                     }
@@ -109,7 +96,6 @@ fn main() {
 }
 
 fn set_tauri_config_path() {
-    // Determine the appropriate config directory
     let config_dir = if cfg!(target_os = "macos") {
         env::var("HOME")
             .map(|home| PathBuf::from(home).join(".mission-control"))
@@ -118,7 +104,6 @@ fn set_tauri_config_path() {
         PathBuf::from(".mission-control")
     };
     
-    // Create the directory if it doesn't exist
     if !config_dir.exists() {
         let _ = std::fs::create_dir_all(&config_dir);
     }
@@ -133,25 +118,16 @@ fn set_tauri_config_path() {
 fn start_server() -> Option<std::process::Child> {
     use std::env;
     
-    // Get the current executable path (works for bundled apps)
     let exe_path = env::current_exe().ok()?;
     let exe_dir = exe_path.parent()?;
     
     println!("Executable path: {:?}", exe_path);
     println!("Executable dir: {:?}", exe_dir);
     
-    // In a bundled macOS app, the structure is:
-    // Mission Control.app/Contents/MacOS/mission-control (the binary)
-    // We need to find src/server.js relative to Resources or the app root
-    
     let possible_roots = [
-        // Development: current working directory
         env::current_dir().ok()?,
-        // Bundled app: Resources directory (if we bundle the src folder there)
         exe_dir.join("../Resources"),
-        // Bundled app: next to the binary
         exe_dir.to_path_buf(),
-        // Bundled app: app root
         exe_dir.join("../../.."),
     ];
     
@@ -160,7 +136,6 @@ fn start_server() -> Option<std::process::Child> {
         if server_script.exists() {
             println!("Found server at: {:?}", server_script);
             
-            // Set working directory to the project root (where node_modules should be)
             let working_dir = if root.join("node_modules").exists() {
                 root.clone()
             } else {
