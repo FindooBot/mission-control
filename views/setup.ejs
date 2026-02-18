@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mission Control - Setup</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="setup-page">
+  <div class="setup-container">
+    <div class="setup-card">
+      <div class="setup-header">
+        <div class="logo">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 6V12L16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h1>Welcome to Mission Control</h1>
+        <p class="subtitle">Let's get your dashboard configured</p>
+      </div>
+
+      <% if (error) { %>
+        <div class="alert alert-error">
+          <%= error %>
+        </div>
+      <% } %>
+
+      <% if (success) { %>
+        <div class="alert alert-success">
+          <strong>Configuration saved!</strong> Redirecting to dashboard...
+        </div>
+        <script>
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 1500);
+        </script>
+      <% } else { %>
+        <form action="/setup" method="POST" class="setup-form">
+          
+          <!-- Calendar Section -->
+          <div class="form-section">
+            <h2>📅 Calendar</h2>
+            <div class="form-group">
+              <label for="personalIcalUrl">Personal iCal URL</label>
+              <input type="url" id="personalIcalUrl" name="personalIcalUrl" 
+                     value="<%= config.calendar?.personalIcalUrl || '' %>"
+                     placeholder="https://calendar.google.com/calendar/ical/...">
+              <span class="help-text">Your personal calendar feed URL</span>
+            </div>
+            <div class="form-group">
+              <label for="workIcalUrl">Work iCal URL</label>
+              <input type="url" id="workIcalUrl" name="workIcalUrl" 
+                     value="<%= config.calendar?.workIcalUrl || '' %>"
+                     placeholder="https://calendar.google.com/calendar/ical/...">
+              <span class="help-text">Your work calendar feed URL</span>
+            </div>
+          </div>
+
+          <!-- Shortcut Section -->
+          <div class="form-section">
+            <h2>🚀 Shortcut (Clubhouse)</h2>
+            <div class="form-group">
+              <label for="shortcutApiToken">API Token</label>
+              <input type="password" id="shortcutApiToken" name="shortcutApiToken" 
+                     value="<%= config.shortcut?.apiToken || '' %>"
+                     placeholder="sc_xxxxxxxxxxxx">
+              <span class="help-text">Get this from Shortcut Settings → API Tokens</span>
+            </div>
+            <div class="form-group">
+              <label for="shortcutWorkspaceName">Workspace Name</label>
+              <input type="text" id="shortcutWorkspaceName" name="shortcutWorkspaceName" 
+                     value="<%= config.shortcut?.workspaceName || '' %>"
+                     placeholder="your-workspace">
+              <span class="help-text">Your Shortcut workspace slug</span>
+            </div>
+          </div>
+
+          <!-- GitHub Section -->
+          <div class="form-section">
+            <h2>🐙 GitHub</h2>
+            <div class="form-group">
+              <label for="githubToken">Personal Access Token</label>
+              <input type="password" id="githubToken" name="githubToken" 
+                     value="<%= config.github?.personalAccessToken || '' %>"
+                     placeholder="ghp_xxxxxxxxxxxx">
+              <span class="help-text">GitHub Settings → Developer settings → Personal access tokens</span>
+            </div>
+            <div class="form-group">
+              <label for="githubRepo">Private Repo to Monitor</label>
+              <input type="text" id="githubRepo" name="githubRepo" 
+                     value="<%= config.github?.privateRepo || 'KimonoIM/web' %>"
+                     placeholder="owner/repo">
+            </div>
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="useGhCli" name="useGhCli" 
+                       <%= config.github?.useGhCli ? 'checked' : 'checked' %>>
+                <span class="checkbox-custom"></span>
+                <span class="checkbox-text">Use gh CLI for private repo access</span>
+              </label>
+              <span class="help-text">Mounts host's gh CLI credentials into container</span>
+            </div>
+          </div>
+
+          <!-- Todoist Section -->
+          <div class="form-section">
+            <h2>✅ Todoist</h2>
+            <div class="form-group">
+              <label for="todoistToken">API Token</label>
+              <input type="password" id="todoistToken" name="todoistToken" 
+                     value="<%= config.todoist?.apiToken || '' %>"
+                     placeholder="xxxxxxxxxxxx">
+              <span class="help-text">Todoist Settings → Integrations → API token</span>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+              Save Configuration
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+        </form>
+      <% } %>
+    </div>
+  </div>
+</body>
+</html>

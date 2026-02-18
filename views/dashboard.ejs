@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="dashboard-page">
+  <header class="dashboard-header">
+    <div class="header-left">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+          <path d="M12 6V12L16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h1>Mission Control</h1>
+    </div>
+    <div class="header-right">
+      <span class="status-badge online">● Online</span>
+      <a href="/setup" class="btn btn-secondary btn-sm">Settings</a>
+    </div>
+  </header>
+
+  <main class="dashboard-grid">
+    <!-- Calendar Widget -->
+    <div class="widget widget-calendar">
+      <div class="widget-header">
+        <h2>📅 Calendar</h2>
+        <span class="widget-count">0 events</span>
+      </div>
+      <div class="widget-content">
+        <div class="empty-state">
+          <p>Calendar integration coming soon</p>
+          <span class="text-muted">Your events will appear here</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shortcut Widget -->
+    <div class="widget widget-shortcut">
+      <div class="widget-header">
+        <h2>🚀 Shortcut Stories</h2>
+        <span class="widget-count">0 stories</span>
+      </div>
+      <div class="widget-content">
+        <div class="empty-state">
+          <p>Shortcut integration coming soon</p>
+          <span class="text-muted">Your stories will appear here</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- GitHub Widget -->
+    <div class="widget widget-github">
+      <div class="widget-header">
+        <h2>🐙 GitHub PRs</h2>
+        <span class="widget-count">0 PRs</span>
+      </div>
+      <div class="widget-content">
+        <div class="empty-state">
+          <p>GitHub integration coming soon</p>
+          <span class="text-muted">Your pull requests will appear here</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Todoist Widget -->
+    <div class="widget widget-todoist">
+      <div class="widget-header">
+        <h2>✅ Todoist Tasks</h2>
+        <span class="widget-count">0 tasks</span>
+      </div>
+      <div class="widget-content">
+        <div class="empty-state">
+          <p>Todoist integration coming soon</p>
+          <span class="text-muted">Your tasks will appear here</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="dashboard-footer">
+    <p>Mission Control v1.0.0 • <a href="/setup">Settings</a></p>
+  </footer>
+
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>
