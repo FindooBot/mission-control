@@ -125,6 +125,36 @@ class ShortcutService {
         }
       }
 
+      // Approach 4: Get stories from each project
+      if (stories.length === 0) {
+        try {
+          console.log('Trying to get stories from projects...');
+          const projectsResponse = await this.client.get('/projects');
+          const projects = projectsResponse.data || [];
+          console.log(`Found ${projects.length} projects`);
+
+          for (const project of projects.slice(0, 5)) { // Limit to first 5 projects
+            try {
+              const storiesResponse = await this.client.get(`/projects/${project.id}/stories`, {
+                params: { page_size: 50 }
+              });
+              const projectStories = storiesResponse.data || [];
+              const myStories = projectStories.filter(story => {
+                const owners = story.owner_ids || [];
+                return owners.includes(this.userId);
+              });
+              stories.push(...myStories);
+            } catch (e) {
+              // Ignore errors for individual projects
+            }
+          }
+
+          console.log(`Found ${stories.length} stories from projects`);
+        } catch (err4) {
+          console.log('Project stories failed:', err4.message);
+        }
+      }
+
       // Filter for active stories (not completed/archived)
       const activeStories = stories.filter(story => 
         story.completed !== true && 
