@@ -32,6 +32,9 @@ const scheduler = new Scheduler();
 const setupRoutes = require('./routes/setup');
 const dashboardRoutes = require('./routes/dashboard');
 
+// Pass scheduler to routes that need it
+app.use('/setup', setupRoutes(scheduler));
+
 // Setup middleware to check config
 app.use((req, res, next) => {
   const config = configManager.getConfig();
@@ -51,7 +54,7 @@ app.use((req, res, next) => {
 
 // Mount routes
 app.use('/setup', setupRoutes);
-app.use('/', dashboardRoutes);
+app.use('/', dashboardRoutes(scheduler));
 
 // API endpoint for manual fetch trigger
 app.post('/api/fetch/:service', async (req, res) => {

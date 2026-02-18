@@ -4,62 +4,76 @@
  */
 
 const express = require('express');
-const router = express.Router();
 const configManager = require('../config/manager');
 
 /**
- * GET /setup - Show setup form
+ * Create setup router with scheduler instance
  */
-router.get('/', (req, res) => {
-  const config = configManager.getConfig();
-  
-  // If already configured, redirect to dashboard
-  if (config.isConfigured) {
-    return res.redirect('/');
-  }
-  
-  res.render('setup', { 
-    config: config,
-    error: null,
-    success: false 
-  });
-});
+function createSetupRouter(scheduler) {
+  const router = express.Router();
 
-/**
- * POST /setup - Save configuration
- */
-router.post('/', (req, res) => {
-  try {
-    const result = configManager.updateFromForm(req.body);
+  /**
+   * GET /setup - Show setup form
+   */
+  router.get('/', (req, res) => {
+    const config = configManager.getConfig();
     
-    if (result) {
+    // If already configured, redirect to dashboard
+    if (config.isConfigured) {
+      return res.redirect('/');
+    }
+    
+    res.render('setup', { 
+      config: config,
+      error: null,
+      success: false 
+    });
+  });
+
+  /**
+   * POST /setup - Save configuration
+   */
+  router.post('/', (req, res) => {
+    try {
+      const result = configManager.updateFromForm(req.body);
+      
+      if (result) {
+        // Restart scheduler with new config
+        if (scheduler) {
+          scheduler.restart();
+          console.log('🔄 Scheduler restarted after setup');
+        }
+        
+        res.render('setup', {
+          config: configManager.getConfig(),
+          error: null,
+          success: true
+        });
+      } else {
+        res.render('setup', {
+          config: configManager.getConfig(),
+          error: 'Failed to save configuration. Please try again.',
+          success: false
+        });
+      }
+    } catch (error) {
+      console.error('Setup error:', error);
       res.render('setup', {
         config: configManager.getConfig(),
-        error: null,
-        success: true
-      });
-    } else {
-      res.render('setup', {
-        config: configManager.getConfig(),
-        error: 'Failed to save configuration. Please try again.',
+        error: error.message,
         success: false
       });
     }
-  } catch (error) {
-    console.error('Setup error:', error);
-    res.render('setup', {
-      config: configManager.getConfig(),
-      error: error.message,
-      success: false
-    });
-  }
-});
+  });
 
-/**
- * GET /setup/success - Redirect to dashboard after successful setup
- */
-router.get('/success', (req, res) => {
-  res.redirect('/');
-});
+  /**
+   * GET /setup/success - Redirect to dashboard after successful setup
+   */
+  router.get('/success', (req, res) => {
+    res.redirect('/');
+  });
 
-module.exports = router;
+  return router;
+}
+
+module.exports = createSetupRouter;
