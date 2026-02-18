@@ -5,8 +5,30 @@
 
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
-const CONFIG_PATH = path.join(__dirname, '../../config/config.json');
+// Determine config path based on environment
+function getConfigPath() {
+  // If MISSION_CONTROL_CONFIG env var is set, use it
+  if (process.env.MISSION_CONTROL_CONFIG) {
+    return process.env.MISSION_CONTROL_CONFIG;
+  }
+  
+  // If running from Tauri bundled app, use app data directory
+  if (process.env.TAURI_PLATFORM) {
+    const appDataDir = path.join(os.homedir(), '.mission-control');
+    if (!fs.existsSync(appDataDir)) {
+      fs.mkdirSync(appDataDir, { recursive: true });
+    }
+    return path.join(appDataDir, 'config.json');
+  }
+  
+  // Default: development path (relative to git repo)
+  return path.join(__dirname, '../../config/config.json');
+}
+
+const CONFIG_PATH = getConfigPath();
+console.log('Config path:', CONFIG_PATH);
 
 // Default configuration
 const defaultConfig = {
